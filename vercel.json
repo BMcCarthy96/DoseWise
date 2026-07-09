@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npx expo export --platform web",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/resolve.ts": { "maxDuration": 60 },
+    "api/report.ts": { "maxDuration": 300 },
+    "api/reviews.ts": { "maxDuration": 300 }
+  },
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+}
