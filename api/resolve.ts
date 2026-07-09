@@ -5,6 +5,7 @@ import { checkRateLimit, clientIp } from "./_lib/ratelimit";
 import { findDsldLabelByUpc, findDsldIdByName, getDsldLabel, DsldLabel } from "./_lib/dsld";
 import { getOffProductByUpc } from "./_lib/off";
 import { getCachedReport } from "./_lib/cache";
+import { extractJsonObject } from "./_lib/trustReport";
 
 interface VisionIngredient {
   name: string;
@@ -60,9 +61,8 @@ Return ONLY the JSON object, no other text.`;
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") return null;
-  const jsonText = textBlock.text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
   try {
-    return JSON.parse(jsonText);
+    return extractJsonObject(textBlock.text) as VisionExtraction;
   } catch {
     return null;
   }

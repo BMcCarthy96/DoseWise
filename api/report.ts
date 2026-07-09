@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { checkRateLimit, clientIp } from "./_lib/ratelimit";
 import { searchPubmedForIngredient, fetchAbstractsText } from "./_lib/pubmed";
 import { searchFdaRecalls, getFdaAdverseEventSummary } from "./_lib/openfda";
-import { checkDoseAssessment, flagRiskyIngredient } from "./_lib/trustReport";
+import { checkDoseAssessment, flagRiskyIngredient, extractJsonObject } from "./_lib/trustReport";
 import { getCachedReport, setCachedReport } from "./_lib/cache";
 import type { TrustReport } from "../src/types";
 
@@ -172,8 +172,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") throw new Error("No response from AI");
-    const jsonText = textBlock.text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    const report: TrustReport = JSON.parse(jsonText);
+    const report = extractJsonObject(textBlock.text) as TrustReport;
 
     report.reportVersion = 1;
     report.generatedAt = new Date().toISOString();

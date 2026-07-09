@@ -1,5 +1,21 @@
 import type { DoseAssessment } from "../../src/types";
 
+// Extracts a JSON object from a Claude text response that may include
+// prose narration around it — common when the web_search tool is enabled,
+// since the model tends to summarize its findings in natural language
+// despite being told to return only JSON.
+export function extractJsonObject(text: string): unknown {
+  const fenced = text.trim().replace(/^```json\n?/, "").replace(/^```\n?/, "").replace(/\n?```$/, "");
+  try {
+    return JSON.parse(fenced);
+  } catch {
+    const start = fenced.indexOf("{");
+    const end = fenced.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) throw new Error("No JSON object found in response");
+    return JSON.parse(fenced.slice(start, end + 1));
+  }
+}
+
 // Tolerable Upper Intake Levels (adults), approximate, from NIH ODS fact
 // sheets — used only as a secondary check. The primary over-dose signal is
 // DSLD's own %DV figure (see checkDoseAssessment), since it's already

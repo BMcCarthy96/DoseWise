@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Anthropic from "@anthropic-ai/sdk";
 import { checkRateLimit, clientIp } from "./_lib/ratelimit";
 import { getCachedReport, setCachedReport } from "./_lib/cache";
+import { extractJsonObject } from "./_lib/trustReport";
 import type { ReviewConsensus } from "../src/types";
 
 interface ReviewsRequestBody {
@@ -58,8 +59,7 @@ If you find nothing credible for a section, use empty arrays rather than guessin
 
     const textBlock = [...response.content].reverse().find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") throw new Error("No response from AI");
-    const jsonText = textBlock.text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    const reviews: ReviewConsensus = JSON.parse(jsonText);
+    const reviews = extractJsonObject(textBlock.text) as ReviewConsensus;
 
     const existing = getCachedReport(body.productKey);
     if (existing) {
