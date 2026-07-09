@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const cached = getCachedReport(body.productKey);
+  const cached = await getCachedReport(body.productKey);
   if (cached?.reviews) {
     res.status(200).json({ productKey: body.productKey, reviews: cached.reviews });
     return;
@@ -61,11 +61,11 @@ If you find nothing credible for a section, use empty arrays rather than guessin
     if (!textBlock || textBlock.type !== "text") throw new Error("No response from AI");
     const reviews = extractJsonObject(textBlock.text) as ReviewConsensus;
 
-    const existing = getCachedReport(body.productKey);
+    const existing = await getCachedReport(body.productKey);
     if (existing) {
       existing.reviews = reviews;
       existing.meta.searchesUsed = (existing.meta.searchesUsed ?? 0) + 5;
-      setCachedReport(body.productKey, existing);
+      await setCachedReport(body.productKey, existing);
     }
 
     res.status(200).json({ productKey: body.productKey, reviews });

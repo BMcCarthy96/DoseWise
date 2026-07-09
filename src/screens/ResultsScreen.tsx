@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { C, F } from "../theme";
 import { resolveProduct, getReport, getReviews, ResolvedProduct } from "../services/api";
+import { recordScan } from "../services/history";
 import type { TrustReport, ReviewConsensus } from "../types";
 import VerdictHero from "../components/VerdictHero";
 import BreakdownChart from "../components/BreakdownChart";
@@ -55,6 +56,7 @@ export default function ResultsScreen() {
           setReport(resolved.report);
           setReviews(resolved.report.reviews);
           setStage("done");
+          recordScan(resolved.report, resolved.productKey).catch(() => {});
           return;
         }
 
@@ -63,7 +65,12 @@ export default function ResultsScreen() {
         const resolvedProduct = resolved.product;
 
         getReport({ productKey, product: resolvedProduct, label: resolved.label })
-          .then((r) => { if (!cancelled) { setReport(r); setStage("done"); } })
+          .then((r) => {
+            if (cancelled) return;
+            setReport(r);
+            setStage("done");
+            recordScan(r, productKey).catch(() => {});
+          })
           .catch((e) => { if (!cancelled) { setStage("error"); setErrorMsg(e.message); } });
 
         setReviewsLoading(true);

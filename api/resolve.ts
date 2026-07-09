@@ -109,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (upc) {
       const productKey = productKeyForUpc(upc);
-      const cached = getCachedReport(productKey);
+      const cached = await getCachedReport(productKey);
       if (cached) {
         res.status(200).json({ productKey, cached: true, report: cached });
         return;

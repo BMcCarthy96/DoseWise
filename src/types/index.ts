@@ -118,7 +118,7 @@ export interface ScanRecord {
   productName: string;
   verdict: Verdict;
   score: number;
-  report: TrustReport;
+  report?: TrustReport; // present for local scans; remote history rows re-fetch via the cached productKey instead
 }
 
 // ── Navigation ───────────────────────────────────────────────────────────────

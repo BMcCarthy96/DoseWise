@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const cached = getCachedReport(body.productKey);
+  const cached = await getCachedReport(body.productKey);
   if (cached) {
     res.status(200).json({ ...cached, meta: { ...cached.meta, cached: true } });
     return;
@@ -179,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     report.reviews = null;
     report.meta = { model: "claude-sonnet-4-6", cached: false, searchesUsed: 0 };
 
-    setCachedReport(body.productKey, report);
+    await setCachedReport(body.productKey, report);
     res.status(200).json(report);
   } catch {
     res.status(502).json({ error: "Analysis failed — please try again." });

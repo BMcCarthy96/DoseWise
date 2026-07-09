@@ -1,29 +1,50 @@
+import { createClient } from "@supabase/supabase-js";
 import type { TrustReport } from "../../src/types";
-
-// In-memory report cache, scoped to a single warm serverless instance — same
-// caveat as ratelimit.ts. Good enough to make "scan the same UPC twice" free
-// within a warm instance; Phase 5 swaps this for a Supabase-backed
-// report_cache table shared across instances and persisted across cold starts.
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-interface CacheEntry {
-  report: TrustReport;
-  cachedAt: number;
+// Service-role client, server-only — bypasses RLS, so report_cache (which has
+// zero policies defined) is reachable only from here. Falls back to "no
+// cache" if Supabase isn't configured yet, so the pipeline still works
+// end-to-end during local development before Supabase is wired up.
+function getAdminClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
-const cache = new Map<string, CacheEntry>();
+export async function getCachedReport(productKey: string): Promise<TrustReport | null> {
+  const client = getAdminClient();
+  if (!client) return null;
 
-export function getCachedReport(productKey: string): TrustReport | null {
-  const entry = cache.get(productKey);
-  if (!entry) return null;
-  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-    cache.delete(productKey);
-    return null;
-  }
-  return entry.report;
+  const { data, error } = await client
+    .from("report_cache")
+    .select("report, expires_at")
+    .eq("product_key", productKey)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  if (new Date(data.expires_at).getTime() < Date.now()) return null;
+  return data.report as TrustReport;
 }
 
-export function setCachedReport(productKey: string, report: TrustReport): void {
-  cache.set(productKey, { report, cachedAt: Date.now() });
+export async function setCachedReport(productKey: string, report: TrustReport): Promise<void> {
+  const client = getAdminClient();
+  if (!client) return;
+
+  await client.from("report_cache").upsert(
+    {
+      product_key: productKey,
+      upc: report.product.upc ?? null,
+      dsld_id: report.product.dsldId ?? null,
+      brand: report.product.brand,
+      product_name: report.product.name,
+      report,
+      report_version: report.reportVersion,
+      model: report.meta.model,
+      expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
+    },
+    { onConflict: "product_key" },
+  );
 }

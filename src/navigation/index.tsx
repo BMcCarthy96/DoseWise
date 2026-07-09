@@ -17,6 +17,7 @@ import LabelPhotoScreen from "../screens/LabelPhotoScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import ResultsScreen from "../screens/ResultsScreen";
+import AuthScreen from "../screens/AuthScreen";
 import ManualUpcModal from "../components/ManualUpcModal";
 import { C, F } from "../theme";
 
@@ -227,6 +228,7 @@ export default function AppNavigator() {
       <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Results" component={ResultsScreen} options={{ presentation: "modal" }} />
+        <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: "modal" }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

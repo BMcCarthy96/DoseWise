@@ -1,16 +1,31 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { C, F } from "../theme";
+import { supabase } from "../services/supabase";
+import { clearLocalHistory } from "../services/history";
 
-function Row({ icon, label, sub }: { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; sub?: string }) {
+function Row({
+  icon,
+  label,
+  sub,
+  onPress,
+  destructive,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  sub?: string;
+  onPress?: () => void;
+  destructive?: boolean;
+}) {
   return (
-    <TouchableOpacity style={s.row} activeOpacity={0.7}>
+    <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onPress}>
       <View style={s.rowIcon}>
-        <Ionicons name={icon} size={18} color={C.primary} />
+        <Ionicons name={icon} size={18} color={destructive ? C.bad : C.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={s.rowLabel}>{label}</Text>
+        <Text style={[s.rowLabel, destructive && { color: C.bad }]}>{label}</Text>
         {sub ? <Text style={s.rowSub}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
@@ -19,6 +34,27 @@ function Row({ icon, label, sub }: { icon: React.ComponentProps<typeof Ionicons>
 }
 
 export default function SettingsScreen() {
+  const navigation = useNavigation<any>();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null));
+    }, []),
+  );
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setEmail(null);
+  }
+
+  function clearHistory() {
+    Alert.alert("Clear scan history", "This removes your locally saved scans. This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear", style: "destructive", onPress: () => clearLocalHistory() },
+    ]);
+  }
+
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
@@ -26,12 +62,17 @@ export default function SettingsScreen() {
       </View>
 
       <View style={s.section}>
-        <Row icon="log-in-outline" label="Sign in" sub="Save and sync your scan history" />
+        {email ? (
+          <Row icon="person-circle-outline" label={email} sub="Signed in — history syncs across devices" onPress={signOut} />
+        ) : (
+          <Row icon="log-in-outline" label="Sign in" sub="Save and sync your scan history" onPress={() => navigation.navigate("Auth")} />
+        )}
+        {email && <Row icon="log-out-outline" label="Sign out" onPress={signOut} destructive />}
       </View>
 
       <View style={s.section}>
         <Row icon="information-circle-outline" label="Data sources" sub="NIH, PubMed, openFDA & more" />
-        <Row icon="trash-outline" label="Clear scan history" />
+        <Row icon="trash-outline" label="Clear scan history" onPress={clearHistory} destructive />
       </View>
 
       <Text style={s.disclaimer}>
