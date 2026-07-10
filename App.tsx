@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import {
@@ -29,9 +30,11 @@ export default function App() {
 
   return (
     <PhoneFrame>
-      <SafeAreaProvider onLayout={onLayout}>
-        <AppNavigator />
-      </SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider onLayout={onLayout}>
+          <AppNavigator />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     </PhoneFrame>
   );
 }

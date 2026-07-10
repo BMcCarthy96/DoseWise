@@ -32,7 +32,7 @@ function productKeyForBrandName(brand: string, name: string): string {
 
 async function extractLabelFromPhoto(base64: string): Promise<VisionExtraction | null> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const prompt = `Look at this photo of a dietary supplement's Supplement Facts label and packaging. Return ONLY a JSON object with this exact structure:
+  const prompt = `Look at this photo of a dietary supplement. It might show the full Supplement Facts panel, or it might just be the front of the bottle/box with the brand and product name — both are useful. Return ONLY a JSON object with this exact structure:
 {
   "brand": "brand name",
   "productName": "product name",
@@ -42,7 +42,9 @@ async function extractLabelFromPhoto(base64: string): Promise<VisionExtraction |
   ],
   "proprietaryBlends": ["blend name if any ingredients are hidden inside a proprietary/branded blend"]
 }
+Getting "brand" and "productName" right matters most — we can look up the full ingredient list separately once the product is identified. If the photo only shows the front of the package with no visible Supplement Facts panel, that's fine: fill in brand/productName from what's printed on the front and return an empty "ingredients" array rather than guessing at contents you can't see.
 If an amount or %DV isn't legible or the ingredient is inside a proprietary blend, omit that field rather than guessing.
+If you cannot make out any brand name or product name at all (e.g. the photo is blank, blurry, or shows only a barcode with no readable text), return {"brand": "", "productName": "", "ingredients": []}.
 Return ONLY the JSON object, no other text.`;
 
   const response = await client.messages.create({
@@ -145,9 +147,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(502).json({ error: "Could not read the label — please retake the photo with better lighting." });
       return;
     }
+    if (!extraction.brand?.trim() && !extraction.productName?.trim()) {
+      res.status(200).json({ productKey: `unidentified-${Date.now()}`, status: "unknown" });
+      return;
+    }
 
     const productKey = productKeyForBrandName(extraction.brand, extraction.productName);
-    const cached = getCachedReport(productKey);
+    const cached = await getCachedReport(productKey);
     if (cached) {
       res.status(200).json({ productKey, cached: true, report: cached });
       return;

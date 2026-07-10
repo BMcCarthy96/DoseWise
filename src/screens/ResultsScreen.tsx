@@ -106,9 +106,11 @@ export default function ResultsScreen() {
         {stage === "unknown" && (
           <View style={s.messageCard}>
             <Ionicons name="help-circle-outline" size={40} color={C.muted} />
-            <Text style={s.messageTitle}>Couldn't find that barcode</Text>
+            <Text style={s.messageTitle}>{base64 ? "Couldn't identify that product" : "Couldn't find that barcode"}</Text>
             <Text style={s.messageBody}>
-              This product isn't in the databases we check. Try photographing the Supplement Facts label instead.
+              {base64
+                ? "We couldn't make out a brand and product name from that photo. Try a clearer, well-lit shot of the front label or the Supplement Facts panel."
+                : "This product isn't in the databases we check. Try photographing the front label or Supplement Facts panel instead."}
             </Text>
             <TouchableOpacity style={s.retryBtn} onPress={() => navigation.navigate("LabelPhoto")}>
               <Text style={s.retryLabel}>Photo the label</Text>
