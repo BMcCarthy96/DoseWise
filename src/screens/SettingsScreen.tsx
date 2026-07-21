@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { C, F } from "../theme";
 import { supabase } from "../services/supabase";
 import { clearLocalHistory } from "../services/history";
+import { deleteAccount } from "../services/api";
 
 function Row({
   icon,
@@ -43,6 +44,8 @@ export default function SettingsScreen() {
     }, []),
   );
 
+  const [deleting, setDeleting] = useState(false);
+
   async function signOut() {
     await supabase.auth.signOut();
     setEmail(null);
@@ -53,6 +56,44 @@ export default function SettingsScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Clear", style: "destructive", onPress: () => clearLocalHistory() },
     ]);
+  }
+
+  async function performAccountDeletion() {
+    setDeleting(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Your session has expired — sign in again to delete your account.");
+      await deleteAccount(token);
+      await supabase.auth.signOut();
+      await clearLocalHistory();
+      setEmail(null);
+      Alert.alert("Account deleted", "Your account and scan history have been permanently removed.");
+    } catch (e: any) {
+      Alert.alert("Couldn't delete account", e.message ?? "Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function deleteAccountFlow() {
+    // Two-step confirmation — this is irreversible and removes server-side data.
+    Alert.alert(
+      "Delete account?",
+      "This permanently deletes your account and all synced scan history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Are you sure?", "There's no way to recover your account after this.", [
+              { text: "Keep my account", style: "cancel" },
+              { text: "Permanently delete", style: "destructive", onPress: performAccountDeletion },
+            ]),
+        },
+      ],
+    );
   }
 
   return (
@@ -67,7 +108,16 @@ export default function SettingsScreen() {
         ) : (
           <Row icon="log-in-outline" label="Sign in" sub="Save and sync your scan history" onPress={() => navigation.navigate("Auth")} />
         )}
-        {email && <Row icon="log-out-outline" label="Sign out" onPress={signOut} destructive />}
+        {email && <Row icon="log-out-outline" label="Sign out" onPress={signOut} />}
+        {email && (
+          <Row
+            icon="trash-bin-outline"
+            label={deleting ? "Deleting account…" : "Delete account"}
+            sub="Permanently remove your account and synced history"
+            onPress={deleting ? undefined : deleteAccountFlow}
+            destructive
+          />
+        )}
       </View>
 
       <View style={s.section}>

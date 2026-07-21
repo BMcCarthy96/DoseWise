@@ -11,6 +11,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import AppNavigator from "./src/navigation";
 import PhoneFrame from "./src/components/PhoneFrame";
+import DisclaimerGate from "./src/components/DisclaimerGate";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,7 +33,9 @@ export default function App() {
     <PhoneFrame>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider onLayout={onLayout}>
-          <AppNavigator />
+          <DisclaimerGate>
+            <AppNavigator />
+          </DisclaimerGate>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </PhoneFrame>

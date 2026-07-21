@@ -53,3 +53,16 @@ export function getReviews(body: {
 }): Promise<{ productKey: string; reviews: TrustReport["reviews"] }> {
   return post("/api/reviews", body);
 }
+
+// Permanently deletes the signed-in user's account. The user's own access token
+// authorizes the deletion server-side; the anon key can't do this itself.
+export async function deleteAccount(accessToken: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/delete-account`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? "Could not delete your account — please try again.");
+  }
+}
