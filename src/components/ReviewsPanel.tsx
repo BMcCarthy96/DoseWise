@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { C, F } from "../theme";
 import type { ReviewConsensus } from "../types";
@@ -38,15 +38,16 @@ export default function ReviewsPanel({
       <View style={s.section}>
         <Text style={s.sectionTitle}>Third-party certification</Text>
         {reviews.thirdParty.length === 0 ? (
-          <Text style={s.muted}>No third-party certification found.</Text>
+          <Text style={s.muted}>No independently verified certification found. That doesn't mean it isn't tested — only that we couldn't confirm it from a trusted source.</Text>
         ) : (
           reviews.thirdParty.map((t, i) => (
-            <View key={i} style={s.certRow}>
+            <TouchableOpacity key={i} style={s.certRow} activeOpacity={0.6} onPress={() => t.url && Linking.openURL(t.url)}>
               <View style={s.certBadge}>
                 <Text style={s.certBadgeText}>{t.org}</Text>
               </View>
               <Text style={s.certStatus}>{t.status}</Text>
-            </View>
+              <Ionicons name="open-outline" size={13} color={C.muted} />
+            </TouchableOpacity>
           ))
         )}
       </View>
@@ -58,7 +59,9 @@ export default function ReviewsPanel({
         </View>
         <Text style={s.consensusText}>{reviews.consensus.summary}</Text>
         {reviews.consensus.sources.map((src, i) => (
-          <Text key={i} style={s.source} numberOfLines={1}>• {src.title}</Text>
+          <TouchableOpacity key={i} onPress={() => src.url && Linking.openURL(src.url)} activeOpacity={0.6}>
+            <Text style={s.source} numberOfLines={1}>• {src.title}</Text>
+          </TouchableOpacity>
         ))}
       </View>
     </View>

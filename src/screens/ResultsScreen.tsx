@@ -139,6 +139,18 @@ export default function ResultsScreen() {
               confidence={report.verdict.confidence}
             />
 
+            {(report.verdict.confidence === "low" ||
+              report.labelTrust.flags.some((f) => f.type === "data_gap")) && (
+              <View style={s.limitedBanner}>
+                <Ionicons name="information-circle" size={20} color={C.caution} />
+                <Text style={s.limitedText}>
+                  <Text style={s.limitedBold}>Limited data available. </Text>
+                  We couldn't find enough verified information to fully assess this product, so treat this as a
+                  starting point — not a definitive answer.
+                </Text>
+              </View>
+            )}
+
             <View style={s.segments}>
               <SegmentButton icon="pie-chart-outline" label="Breakdown" active={segment === "breakdown"} onPress={() => setSegment(segment === "breakdown" ? null : "breakdown")} />
               <SegmentButton icon="warning-outline" label="Warnings" active={segment === "warnings"} onPress={() => setSegment(segment === "warnings" ? null : "warnings")} />
@@ -167,10 +179,41 @@ export default function ResultsScreen() {
                 )}
               </View>
             )}
+
+            <SourcesFooter report={report} />
           </>
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SourcesFooter({ report }: { report: TrustReport }) {
+  const sources: string[] = [];
+  if (report.product.source === "dsld") sources.push("NIH Dietary Supplement Label Database (product & ingredient facts)");
+  if (report.product.source === "off") sources.push("Open Food Facts (product identification)");
+  if (report.product.source === "vision") sources.push("Label photo read by AI (unverified against a product database)");
+  sources.push("PubMed / NIH (published research)");
+  sources.push("openFDA (recalls & adverse-event reports)");
+  if (report.reviews) sources.push("Web search (third-party certifications & public reviews)");
+
+  return (
+    <View style={s.footer}>
+      <Text style={s.footerTitle}>Where this comes from</Text>
+      {sources.map((src) => (
+        <View key={src} style={s.footerRow}>
+          <Ionicons name="checkmark" size={13} color={C.primary} style={{ marginTop: 2 }} />
+          <Text style={s.footerSource}>{src}</Text>
+        </View>
+      ))}
+      <Text style={s.footerDisclaimer}>
+        DoseWise reports only what it can verify from these sources and won't guess when data is missing. This is
+        informational only — not medical advice. Talk to a healthcare provider before starting or stopping any supplement.
+      </Text>
+      <Text style={s.footerMeta}>
+        Generated {new Date(report.generatedAt).toLocaleDateString()} · {report.meta.model}
+      </Text>
+    </View>
   );
 }
 
@@ -206,6 +249,19 @@ const s = StyleSheet.create({
   messageBody: { fontFamily: F.semibold, fontSize: 13, color: C.muted, textAlign: "center", lineHeight: 19 },
   retryBtn: { marginTop: 8, backgroundColor: C.primary, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12 },
   retryLabel: { fontFamily: F.bold, fontSize: 14, color: "#fff" },
+  limitedBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: `${C.caution}14`,
+    borderColor: `${C.caution}44`,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 14,
+  },
+  limitedText: { flex: 1, fontFamily: F.semibold, fontSize: 12.5, color: C.text, lineHeight: 18 },
+  limitedBold: { fontFamily: F.extrabold, color: C.caution },
   segments: { flexDirection: "row", gap: 10, marginTop: 20 },
   segmentBtn: {
     flex: 1,
@@ -230,4 +286,10 @@ const s = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
   },
+  footer: { marginTop: 24, gap: 6 },
+  footerTitle: { fontFamily: F.extrabold, fontSize: 12, color: C.text, textTransform: "uppercase", letterSpacing: 0.4 },
+  footerRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  footerSource: { flex: 1, fontFamily: F.semibold, fontSize: 12, color: C.muted, lineHeight: 17 },
+  footerDisclaimer: { fontFamily: F.semibold, fontSize: 11, color: C.muted, lineHeight: 16, marginTop: 8 },
+  footerMeta: { fontFamily: F.semibold, fontSize: 10, color: C.muted, marginTop: 6 },
 });
