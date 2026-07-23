@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bmccarthy96.dosewise",
+      "bundleIdentifier": "com.dosewise.app",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "DoseWise uses the camera to scan supplement barcodes and labels."
       }
     },
     "android": {
-      "package": "com.bmccarthy96.dosewise",
+      "package": "com.dosewise.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

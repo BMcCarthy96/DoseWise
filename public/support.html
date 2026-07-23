@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoseWise — Support</title>
+  <style>
+    :root {
+      --ink: #0F2A43; --soft: #3A5064; --muted: #5F7B7A; --line: #DCE9E7;
+      --bg: #F4FAF9; --card: #FFFFFF; --teal: #0D9488; --teal-deep: #0B7A70;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#E8F3F1; --soft:#B4CBC8; --muted:#8AA6A3; --line:#1E3A3A;
+        --bg:#08161A; --card:#0E2126; --teal:#2DD4BF; --teal-deep:#5EEAD4; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+      font-family: ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      line-height:1.65; -webkit-font-smoothing:antialiased; }
+    .wrap { max-width: 760px; margin:0 auto; padding: 40px 22px 80px; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+    .mark { width:40px; height:40px; border-radius:12px;
+      background:linear-gradient(150deg,#12A79A,#0B7A70); display:grid; place-items:center; flex:none; }
+    .mark svg { width:22px; height:22px; }
+    .brand { font-weight:800; font-size:15px; }
+    .brand span { display:block; font-size:12px; color:var(--muted); font-weight:600; }
+    h1 { font-size:30px; letter-spacing:-0.02em; margin:8px 0 6px; }
+    .lead { font-size:16px; color:var(--soft); margin-bottom:26px; }
+    h2 { font-size:19px; letter-spacing:-0.01em; margin:32px 0 10px; }
+    p, li { color:var(--soft); font-size:15px; }
+    strong { color:var(--ink); }
+    a { color:var(--teal-deep); }
+    ol { padding-left:20px; } li { margin:7px 0; }
+    .faq { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px 18px; margin-top:14px; }
+    .faq details { border-bottom:1px solid var(--line); padding:14px 0; }
+    .faq details:last-child { border-bottom:0; }
+    .faq summary { font-weight:700; color:var(--ink); cursor:pointer; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .faq summary::-webkit-details-marker { display:none; }
+    .faq summary::after { content:"+"; color:var(--teal); font-weight:800; font-size:20px; }
+    .faq details[open] summary::after { content:"\2212"; }
+    .faq p { margin:10px 0 2px; }
+    .contact { background:linear-gradient(135deg, color-mix(in srgb, var(--teal) 12%, var(--card)), var(--card));
+      border:1px solid color-mix(in srgb, var(--teal) 30%, var(--line)); border-radius:14px; padding:18px 20px; margin-top:26px; }
+    .contact h2 { margin-top:0; }
+    footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    footer a { color:var(--teal-deep); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.4l7.2 2.7v5.3c0 4.5-3.1 8.6-7.2 10-4.1-1.4-7.2-5.5-7.2-10V5.1L12 2.4z" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.2 12.2l2.8 2.8 5-5.6" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="brand">DoseWise<span>Supplement trust reports</span></div>
+    </header>
+
+    <h1>Support</h1>
+    <p class="lead">Help with scanning supplements and getting trust reports in DoseWise. If you can't find what you need below, we're an email away.</p>
+
+    <h2>Getting started</h2>
+    <ol>
+      <li><strong>Scan a barcode</strong> — point your camera at a supplement's barcode on the Scan tab for an instant lookup.</li>
+      <li><strong>Photo the label</strong> — no barcode, or it's not in the database? Tap "Photo the label" and take a clear picture of the front of the bottle or the Supplement Facts panel.</li>
+      <li><strong>Enter a UPC</strong> — type the barcode number in manually if you prefer.</li>
+    </ol>
+    <p>You'll get a color-coded verdict, an ingredient-by-ingredient breakdown with links to the research, any FDA recalls or warnings, and third-party certification status when we can verify it.</p>
+
+    <h2>Frequently asked questions</h2>
+    <div class="faq">
+      <details>
+        <summary>Is DoseWise medical advice?</summary>
+        <p>No. DoseWise summarizes publicly available research and regulatory data to help you understand a product. It does not diagnose, treat, or replace professional guidance. Always talk to a doctor or pharmacist before starting, stopping, or combining supplements.</p>
+      </details>
+      <details>
+        <summary>It says a product wasn't found — what do I do?</summary>
+        <p>The barcode databases we use are US-focused and don't list every product. Try "Photo the label" instead — a clear photo of the front of the package or the Supplement Facts panel lets DoseWise identify and analyze the product directly.</p>
+      </details>
+      <details>
+        <summary>How accurate is the information?</summary>
+        <p>DoseWise draws on the NIH Dietary Supplement Label Database, PubMed, and openFDA, and cites the research behind each finding. It only reports what those sources support — when evidence is thin, it tells you so and lowers its confidence rather than guessing. It won't invent sources or certifications.</p>
+      </details>
+      <details>
+        <summary>Why does it ask for camera and photo access?</summary>
+        <p>The camera scans barcodes and labels; photo access lets you analyze a picture you've already taken. Both are used only for scanning supplements. You can decline and still use manual UPC entry.</p>
+      </details>
+      <details>
+        <summary>Do I need an account?</summary>
+        <p>No. You can scan and get full reports without signing in. An optional account only adds syncing your scan history across devices.</p>
+      </details>
+      <details>
+        <summary>How do I delete my account and data?</summary>
+        <p>Open Settings and tap "Delete account." This permanently removes your account and all synced scan history. To remove locally saved scans without deleting your account, use "Clear scan history." See our <a href="/privacy.html">Privacy Policy</a> for details.</p>
+      </details>
+    </div>
+
+    <div class="contact">
+      <h2>Contact us</h2>
+      <p style="margin-bottom:0">Need help, found a bug, or have feedback? Email <a href="mailto:bmac96.dev@gmail.com">bmac96.dev@gmail.com</a> and we'll get back to you.</p>
+    </div>
+
+    <footer>
+      DoseWise provides informational summaries of publicly available research and regulatory data. It is not medical advice. · <a href="/privacy.html">Privacy Policy</a>
+    </footer>
+  </div>
+</body>
+</html>

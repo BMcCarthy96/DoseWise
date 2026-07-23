@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoseWise — Privacy Policy</title>
+  <style>
+    :root {
+      --ink: #0F2A43; --soft: #3A5064; --muted: #5F7B7A; --line: #DCE9E7;
+      --bg: #F4FAF9; --card: #FFFFFF; --teal: #0D9488; --teal-deep: #0B7A70;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#E8F3F1; --soft:#B4CBC8; --muted:#8AA6A3; --line:#1E3A3A;
+        --bg:#08161A; --card:#0E2126; --teal:#2DD4BF; --teal-deep:#5EEAD4; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+      font-family: ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      line-height:1.65; -webkit-font-smoothing:antialiased; }
+    .wrap { max-width: 760px; margin:0 auto; padding: 40px 22px 80px; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+    .mark { width:40px; height:40px; border-radius:12px;
+      background:linear-gradient(150deg,#12A79A,#0B7A70); display:grid; place-items:center; flex:none; }
+    .mark svg { width:22px; height:22px; }
+    .brand { font-weight:800; font-size:15px; }
+    .brand span { display:block; font-size:12px; color:var(--muted); font-weight:600; }
+    h1 { font-size:30px; letter-spacing:-0.02em; margin:8px 0 4px; }
+    .updated { color:var(--muted); font-size:13px; font-weight:600; margin-bottom:28px; }
+    h2 { font-size:19px; letter-spacing:-0.01em; margin:34px 0 8px; }
+    p, li { color:var(--soft); font-size:15px; }
+    a { color:var(--teal-deep); }
+    ul { padding-left:20px; } li { margin:6px 0; }
+    .lead { font-size:16px; color:var(--ink); }
+    strong { color:var(--ink); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-top:14px; }
+    footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    footer a { color:var(--teal-deep); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.4l7.2 2.7v5.3c0 4.5-3.1 8.6-7.2 10-4.1-1.4-7.2-5.5-7.2-10V5.1L12 2.4z" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.2 12.2l2.8 2.8 5-5.6" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="brand">DoseWise<span>Supplement trust reports</span></div>
+    </header>
+
+    <h1>Privacy Policy</h1>
+    <div class="updated">Last updated: July 21, 2026</div>
+
+    <p class="lead">DoseWise helps you understand what's in a supplement using published research and public regulatory data. This policy explains what information the app handles, why, and the choices you have. In short: you can use DoseWise without an account, we don't sell your data, and we don't run advertising or third-party tracking.</p>
+
+    <h2>Information we collect</h2>
+    <ul>
+      <li><strong>Nothing required to start.</strong> You can scan supplements without creating an account. When you scan anonymously, your scan history is stored only on your device.</li>
+      <li><strong>Scan input.</strong> To analyze a product, the app sends either the <strong>barcode number (UPC)</strong> you scan or a <strong>photo of the supplement label</strong> to our server so it can be identified and read. Label photos are processed to extract the text on them and are <strong>not stored</strong> after the report is generated.</li>
+      <li><strong>Account information (optional).</strong> If you create an account to sync your history across devices, we store your <strong>email address</strong> and your <strong>scan history</strong> (product name, brand, the report's verdict and score, and the time of the scan).</li>
+    </ul>
+
+    <h2>How your scans are processed</h2>
+    <p>When you request a report, our server combines information from trusted, public sources and an AI model to produce the analysis:</p>
+    <ul>
+      <li><strong>Anthropic</strong> — the Claude AI model reads label photos and synthesizes the research summary. Your scan input is sent to Anthropic's API for this processing.</li>
+      <li><strong>Public data sources</strong> — the U.S. National Institutes of Health Dietary Supplement Label Database (DSLD), the National Library of Medicine's PubMed, and openFDA. These are queried by product and ingredient names, not by anything that identifies you.</li>
+    </ul>
+    <p>We restrict the report to information these sources can support, and cite the research behind it. When the data is limited, DoseWise says so rather than guessing.</p>
+
+    <h2>Where your data is stored</h2>
+    <ul>
+      <li><strong>On your device</strong> — anonymous scan history (until you clear it or delete the app).</li>
+      <li><strong>Supabase</strong> — if you create an account, your email and synced scan history are stored in our Supabase database. Access is restricted so you can only read your own history.</li>
+      <li><strong>Vercel</strong> — hosts our application and API. Generated reports are cached (keyed by product, not by user) for up to 30 days so repeat scans are faster; this cache contains no personal information.</li>
+    </ul>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>We do <strong>not</strong> sell or rent your personal information.</li>
+      <li>We do <strong>not</strong> serve advertising or use third-party advertising or analytics trackers.</li>
+      <li>We do <strong>not</strong> collect your contacts, precise location, or health records.</li>
+    </ul>
+
+    <h2>Data retention</h2>
+    <ul>
+      <li>Anonymous, on-device history remains until you clear it or uninstall the app.</li>
+      <li>Account data (email and synced history) is kept until you delete your account.</li>
+      <li>Cached product reports expire automatically within 30 days.</li>
+    </ul>
+
+    <h2>Your choices and rights</h2>
+    <ul>
+      <li><strong>Use anonymously</strong> — you never have to create an account.</li>
+      <li><strong>Clear your history</strong> — remove locally saved scans at any time from Settings.</li>
+      <li><strong>Delete your account</strong> — in Settings, "Delete account" permanently removes your account and all synced scan history. This cannot be undone.</li>
+      <li><strong>Access or export</strong> — contact us and we'll help you access the data associated with your account.</li>
+    </ul>
+    <p>Depending on where you live, you may have additional rights under laws such as the GDPR or CCPA, including the right to access, correct, or delete your personal data. You can exercise these using the controls above or by contacting us.</p>
+
+    <h2>Children's privacy</h2>
+    <p>DoseWise is not directed to children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided us information, please contact us and we will delete it.</p>
+
+    <h2>Security</h2>
+    <p>We use reputable providers (Supabase, Vercel, Anthropic) and standard safeguards such as encrypted connections and access controls. No method of transmission or storage is perfectly secure, but we work to protect your information.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy as the app evolves. When we make material changes, we'll update the date at the top of this page.</p>
+
+    <div class="card">
+      <h2 style="margin-top:0">Contact</h2>
+      <p style="margin-bottom:0">Questions about this policy or your data? Email <a href="mailto:bmac96.dev@gmail.com">bmac96.dev@gmail.com</a>.</p>
+    </div>
+
+    <footer>
+      DoseWise provides informational summaries of publicly available research and regulatory data. It is not medical advice. · <a href="/support.html">Support</a>
+    </footer>
+  </div>
+</body>
+</html>
