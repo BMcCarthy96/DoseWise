@@ -5,6 +5,7 @@ import { searchPubmedForIngredient, fetchAbstractsText } from "./_lib/pubmed";
 import { searchFdaRecalls, getFdaAdverseEventSummary } from "./_lib/openfda";
 import { checkDoseAssessment, flagRiskyIngredient, extractJsonObject } from "./_lib/trustReport";
 import { getCachedReport, setCachedReport } from "./_lib/cache";
+import { sanitizeScoreFactors } from "../src/utils/scoreFactors";
 import type { TrustReport, Citation } from "../src/types";
 
 interface ReportIngredient {
@@ -126,7 +127,7 @@ type TrustReport = {
   reportVersion: 1;
   generatedAt: string; // ISO timestamp
   product: { source: "dsld"|"off"|"vision"; dsldId?: number; upc?: string; brand: string; name: string; servingSize?: string; offMarket?: boolean };
-  verdict: { grade: "good"|"caution"|"bad"; score: number; confidence: "low"|"medium"|"high"; headline: string; summary: string };
+  verdict: { grade: "good"|"caution"|"bad"; score: number; confidence: "low"|"medium"|"high"; headline: string; summary: string; scoreFactors: Array<{ impact: "positive"|"negative"|"neutral"; text: string }> };
   breakdown: {
     ingredients: Array<{ name: string; amount?: number; unit?: string; dvPercent?: number; category: "vitamin"|"mineral"|"botanical"|"amino_acid"|"blend"|"other"; evidenceGrade: "A"|"B"|"C"|"D"|"insufficient"; doseAssessment: "below_effective"|"effective"|"above_UL"|"unknown"; note: string; citations: Array<{ pmid?: string; title: string; year?: number; url: string }> }>;
     proprietaryBlends: string[];
@@ -140,6 +141,7 @@ type TrustReport = {
 
 Guidance (ACCURACY IS THE TOP PRIORITY — never invent data; it is always better to say "not enough data" than to guess):
 - "headline" must be a short, plain-language, human verdict a non-expert can read in one glance (e.g. "Generally safe at this dose" or "Contains a flagged stimulant — use caution"), matching "grade".
+- "scoreFactors" must be 3-5 short, plain-language reasons that EXPLAIN THE SCORE — the specific things that lifted or lowered it, each grounded strictly in the evidence, doses, flags, recalls, and missing-data described below (never invent a factor). Use impact "positive" for things that raised the score (e.g. effective standard doses, clean recall history), "negative" for things that lowered it (e.g. a dose far above the upper limit, a flagged ingredient, a proprietary blend, recalls), and "neutral" for limits that capped confidence rather than helping or hurting (e.g. missing exact doses, thin research). Each "text" is one concise sentence a non-expert understands. The factors should read as an honest justification of the number.
 - Each ingredient's "note" must be 1-2 plain-language sentences written for someone with NO science background: say what the ingredient does in the body and whether this dose looks appropriate. Avoid jargon.
 - CITATIONS: populate each ingredient's "citations" array ONLY with PMIDs explicitly listed as CITEABLE SOURCES for that ingredient below. Never invent, guess, or reuse a PMID, title, year, or URL. If no citeable source is listed for an ingredient, its "citations" MUST be an empty array. Citing nothing is strongly preferred over citing anything uncertain.
 - "evidenceGrade" must be based strictly on the citeable sources provided. Use "insufficient" honestly whenever evidence is thin or absent — never inflate a grade to look authoritative.
@@ -231,6 +233,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Strip any citation the model invented; keep only verified PubMed sources.
     sanitizeReportCitations(report, buildCitationWhitelist(evidence));
+
+    // Keep only well-formed score factors; the client derives them from the
+    // structured data if the model returned none.
+    if (report.verdict) report.verdict.scoreFactors = sanitizeScoreFactors(report.verdict.scoreFactors);
 
     await setCachedReport(body.productKey, report);
     res.status(200).json(report);

@@ -7,6 +7,8 @@ import { resolveProduct, getReport, getReviews, ResolvedProduct } from "../servi
 import { recordScan } from "../services/history";
 import type { TrustReport, ReviewConsensus } from "../types";
 import VerdictHero from "../components/VerdictHero";
+import WhyThisGrade from "../components/WhyThisGrade";
+import { getScoreFactors } from "../utils/scoreFactors";
 import BreakdownChart from "../components/BreakdownChart";
 import WarningList from "../components/WarningList";
 import ReviewsPanel from "../components/ReviewsPanel";
@@ -138,6 +140,8 @@ export default function ResultsScreen() {
               summary={report.verdict.summary}
               confidence={report.verdict.confidence}
             />
+
+            <WhyThisGrade factors={getScoreFactors(report)} />
 
             {(report.verdict.confidence === "low" ||
               report.labelTrust.flags.some((f) => f.type === "data_gap")) && (

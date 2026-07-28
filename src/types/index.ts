@@ -15,6 +15,15 @@ export type FlagType =
   | "data_gap";
 export type FlagSeverity = "info" | "warn" | "danger";
 export type ReviewSentiment = "positive" | "mixed" | "negative";
+export type ScoreImpact = "positive" | "negative" | "neutral";
+
+// A single plain-language reason the product scored the way it did. Positive
+// factors lifted the score, negative ones lowered it, and neutral ones are
+// limits (missing data, thin evidence) that capped how confidently it can score.
+export interface ScoreFactor {
+  impact: ScoreImpact;
+  text: string;
+}
 
 export interface Citation {
   pmid?: string;
@@ -88,6 +97,7 @@ export interface TrustReport {
     confidence: Confidence;
     headline: string;
     summary: string;
+    scoreFactors?: ScoreFactor[]; // "why this grade" — optional; derived client-side when absent
   };
   breakdown: {
     ingredients: IngredientEvidence[];
