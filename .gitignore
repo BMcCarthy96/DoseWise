@@ -43,3 +43,6 @@ yarn-error.*
 
 # Vercel
 .vercel/
+
+# Screenshot generation scratch (puppeteer/resvg scripts + raw captures)
+.shots/
