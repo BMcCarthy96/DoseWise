@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { checkRateLimit, clientIp } from "./_lib/ratelimit";
 import { searchPubmedForIngredient, fetchAbstractsText } from "./_lib/pubmed";
 import { searchFdaRecalls, getFdaAdverseEventSummary } from "./_lib/openfda";
-import { checkDoseAssessment, flagRiskyIngredient, extractJsonObject } from "./_lib/trustReport";
+import { assessDose, flagRiskyIngredient, extractJsonObject } from "./_lib/trustReport";
 import { getCachedReport, setCachedReport } from "./_lib/cache";
 import { sanitizeScoreFactors } from "../src/utils/scoreFactors";
 import type { TrustReport, Citation } from "../src/types";
@@ -43,8 +43,15 @@ async function gatherIngredientEvidence(ingredient: ReportIngredient) {
   const articles = await searchPubmedForIngredient(ingredient.name).catch(() => []);
   const abstractsText = await fetchAbstractsText(articles.slice(0, 3).map((a) => a.pmid)).catch(() => "");
   const riskyNote = flagRiskyIngredient(ingredient.name);
-  const doseAssessment = ingredient.isBlendComponent ? "unknown" : checkDoseAssessment(ingredient.dvPercent);
-  return { ingredient, articles, abstractsText, riskyNote, doseAssessment };
+  const dose = ingredient.isBlendComponent
+    ? { assessment: "unknown" as const }
+    : assessDose({
+        name: ingredient.name,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        dvPercent: ingredient.dvPercent,
+      });
+  return { ingredient, articles, abstractsText, riskyNote, dose };
 }
 
 interface AllowedCitation {
@@ -101,15 +108,18 @@ function buildSynthesisPrompt(
   adverseEvents: Awaited<ReturnType<typeof getFdaAdverseEventSummary>>,
 ): string {
   const ingredientBlock = evidence
-    .map(({ ingredient, articles, abstractsText, riskyNote, doseAssessment }) => {
+    .map(({ ingredient, articles, abstractsText, riskyNote, dose }) => {
       const doseLine = ingredient.isBlendComponent
         ? "Dose hidden inside a proprietary blend — not individually disclosed."
-        : `${ingredient.amount ?? "?"} ${ingredient.unit ?? ""} (${ingredient.dvPercent != null ? `${ingredient.dvPercent}% DV` : "no %DV given"}), heuristic dose assessment: ${doseAssessment}.`;
+        : `${ingredient.amount ?? "?"} ${ingredient.unit ?? ""} (${ingredient.dvPercent != null ? `${ingredient.dvPercent}% DV` : "no %DV given"}), heuristic dose assessment: ${dose.assessment}.`;
+      const limitLine = dose.exceeded
+        ? `UPPER-LIMIT CHECK: this exceeds the established Tolerable Upper Intake Level of ${dose.exceeded.ul} ${dose.exceeded.unit}/day for adults.${dose.exceeded.ulNote ? ` ${dose.exceeded.ulNote}` : ""}`
+        : "";
       const riskyLine = riskyNote ? `KNOWN RISK FLAG: ${riskyNote}` : "";
       const articlesLine = articles.length > 0
         ? `CITEABLE SOURCES (use ONLY these PMIDs in "citations" for this ingredient — do not invent any others):\n${articles.map((a) => `- PMID ${a.pmid} — ${a.title} (${a.year ?? "n.d."})`).join("\n")}`
         : `No citeable PubMed sources were found for this ingredient. You MUST use an empty "citations" array for it, and set evidenceGrade to "insufficient" unless a KNOWN RISK FLAG above applies.`;
-      return `### ${ingredient.name}\n${doseLine}\n${riskyLine}\n${articlesLine}\n${abstractsText ? `Abstract excerpts:\n${abstractsText.slice(0, 1500)}` : ""}`;
+      return `### ${ingredient.name}\n${doseLine}\n${limitLine}\n${riskyLine}\n${articlesLine}\n${abstractsText ? `Abstract excerpts:\n${abstractsText.slice(0, 1500)}` : ""}`;
     })
     .join("\n\n");
 
@@ -143,6 +153,7 @@ Guidance (ACCURACY IS THE TOP PRIORITY — never invent data; it is always bette
 - "headline" must be a short, plain-language, human verdict a non-expert can read in one glance (e.g. "Generally safe at this dose" or "Contains a flagged stimulant — use caution"), matching "grade".
 - "scoreFactors" must be 3-5 short, plain-language reasons that EXPLAIN THE SCORE — the specific things that lifted or lowered it, each grounded strictly in the evidence, doses, flags, recalls, and missing-data described below (never invent a factor). Use impact "positive" for things that raised the score (e.g. effective standard doses, clean recall history), "negative" for things that lowered it (e.g. a dose far above the upper limit, a flagged ingredient, a proprietary blend, recalls), and "neutral" for limits that capped confidence rather than helping or hurting (e.g. missing exact doses, thin research). Each "text" is one concise sentence a non-expert understands. The factors should read as an honest justification of the number.
 - Each ingredient's "note" must be 1-2 plain-language sentences written for someone with NO science background: say what the ingredient does in the body and whether this dose looks appropriate. Avoid jargon.
+- DOSE SAFETY: copy each ingredient's "doseAssessment" from the "heuristic dose assessment" given below — it is computed per nutrient against that nutrient's own published Tolerable Upper Intake Level, so do not override it from the %DV figure. A large %DV is NOT by itself unsafe: several nutrients (biotin, B12, thiamin, riboflavin, pantothenic acid, vitamin K, chromium) have NO established upper limit, and routinely appear at thousands of %DV without exceeding any safety threshold. Only use doseAssessment "above_UL" and only add a "dose_above_UL" flag when an UPPER-LIMIT CHECK line appears for that ingredient below; when it does, cite the specific limit and repeat any caveat it gives. If an ingredient has a very high %DV but no UPPER-LIMIT CHECK line, you may note in plain language that the dose is far above the daily value and that the excess is not used by the body, but you must NOT call it unsafe or over a limit.
 - CITATIONS: populate each ingredient's "citations" array ONLY with PMIDs explicitly listed as CITEABLE SOURCES for that ingredient below. Never invent, guess, or reuse a PMID, title, year, or URL. If no citeable source is listed for an ingredient, its "citations" MUST be an empty array. Citing nothing is strongly preferred over citing anything uncertain.
 - "evidenceGrade" must be based strictly on the citeable sources provided. Use "insufficient" honestly whenever evidence is thin or absent — never inflate a grade to look authoritative.
 - HONESTY ON THIN DATA: if there is little or no structured ingredient data, or no research evidence at all, set verdict.confidence to "low", state that plainly in verdict.summary, and add a { type: "data_gap", severity: "info", detail: "..." } flag. Do not present a confident-looking verdict when the underlying data is thin.

@@ -45,10 +45,10 @@ export function deriveScoreFactors(report: TrustReport): ScoreFactor[] {
     });
   }
 
-  // Ingredients dosed above the usual upper reference.
+  // Ingredients dosed above their nutrient's tolerable upper intake level.
   const overUL = ingredients.filter((i) => i.doseAssessment === "above_UL");
   for (const i of overUL.slice(0, 2)) {
-    factors.push({ impact: "negative", text: `${i.name} is dosed well above its standard daily value.` });
+    factors.push({ impact: "negative", text: `${i.name} is dosed above its tolerable upper intake level.` });
   }
 
   // Positive: ingredients at effective, standard doses.

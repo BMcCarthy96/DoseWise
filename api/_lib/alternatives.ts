@@ -41,10 +41,20 @@ function nonBlendIngredients(label: DsldLabel): DsldIngredient[] {
   return label.ingredients.filter((i) => !i.isBlendComponent);
 }
 
-// Ingredients dosed at/above the "above_UL" threshold (>=300% DV), using the
-// same heuristic the report itself uses so the comparison stays consistent.
+// Ingredients dosed above their own nutrient's Tolerable Upper Intake Level,
+// using the same per-nutrient check the report itself uses so the comparison
+// stays consistent. Nutrients with no established UL (biotin, B12, etc.) are
+// never counted here regardless of how high their %DV runs.
 function overLimitIngredients(label: DsldLabel): DsldIngredient[] {
-  return nonBlendIngredients(label).filter((i) => checkDoseAssessment(i.dvPercent) === "above_UL");
+  return nonBlendIngredients(label).filter(
+    (i) =>
+      checkDoseAssessment({
+        name: i.name,
+        amount: i.quantity,
+        unit: i.unit,
+        dvPercent: i.dvPercent,
+      }) === "above_UL",
+  );
 }
 
 function riskyIngredients(label: DsldLabel): string[] {
@@ -74,7 +84,7 @@ export function labelIssues(label: DsldLabel): Set<IssueCode> {
 function describeFix(issue: IssueCode): string {
   switch (issue) {
     case "dose_above_UL":
-      return "No ingredient is dosed above its standard daily value.";
+      return "No ingredient exceeds its tolerable upper intake level.";
     case "proprietary_blend":
       return "No proprietary blend — every ingredient's dose is disclosed.";
     case "risky_ingredient":
@@ -89,8 +99,8 @@ function describeCaveat(issue: IssueCode, label: DsldLabel): string {
     case "dose_above_UL": {
       const names = overLimitIngredients(label).map((i) => i.name).slice(0, 2);
       return names.length
-        ? `${names.join(" and ")} ${names.length > 1 ? "are" : "is"} dosed well above the standard daily value.`
-        : "Contains an ingredient above its standard daily value.";
+        ? `${names.join(" and ")} ${names.length > 1 ? "are" : "is"} dosed above the tolerable upper intake level.`
+        : "Contains an ingredient above its tolerable upper intake level.";
     }
     case "proprietary_blend":
       return "Uses a proprietary blend, so some doses aren't disclosed.";
