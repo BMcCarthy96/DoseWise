@@ -1,4 +1,4 @@
-import type { TrustReport } from "../types";
+import type { Alternative, IssueCode, TrustReport } from "../types";
 
 // Both native and web call our own Vercel API routes rather than embedding an
 // Anthropic key in the client bundle — EXPO_PUBLIC_API_BASE points native
@@ -52,6 +52,13 @@ export function getReviews(body: {
   name: string;
 }): Promise<{ productKey: string; reviews: TrustReport["reviews"] }> {
   return post("/api/reviews", body);
+}
+
+export function getAlternatives(body: {
+  product: { brand: string; name: string; dsldId?: number };
+  issues: IssueCode[];
+}): Promise<{ alternatives: Alternative[] }> {
+  return post("/api/alternatives", body);
 }
 
 // Permanently deletes the signed-in user's account. The user's own access token

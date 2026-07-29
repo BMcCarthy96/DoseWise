@@ -79,6 +79,21 @@ export interface ReviewConsensus {
   };
 }
 
+// Label problems DoseWise can compare deterministically between products.
+export type IssueCode = "dose_above_UL" | "proprietary_blend" | "risky_ingredient" | "missing_doses";
+
+// A real NIH DSLD product suggested as a better-labelled option. Deliberately
+// has NO DoseWise score — we haven't run the full report pipeline on it, and
+// showing an invented number would break the app's accuracy promise.
+export interface Alternative {
+  dsldId: number;
+  upc?: string;
+  brand: string;
+  name: string;
+  fixes: string[];
+  caveats: string[];
+}
+
 export interface TrustReport {
   reportVersion: 1;
   generatedAt: string;

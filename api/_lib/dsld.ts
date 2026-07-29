@@ -84,35 +84,73 @@ export async function getDsldLabel(id: string | number): Promise<DsldLabel | nul
   return normalizeDsldLabel(raw);
 }
 
+// DSLD represents an undisclosed amount as quantity 0 with unit "NP" (not
+// provided) rather than omitting it, so a raw null-check would read "0 NP" as a
+// real dose of zero. Returns {} whenever the label doesn't actually disclose one.
+function disclosedQuantity(q: any): { quantity?: number; unit?: string } {
+  const quantity = q?.quantity;
+  const unit = q?.unit;
+  if (quantity == null || quantity === 0 || !unit || unit === "NP") return {};
+  return { quantity, unit };
+}
+
+function dvPercentOf(q: any): number | undefined {
+  const pct = q?.dailyValueTargetGroup?.[0]?.percent;
+  return pct == null ? undefined : pct;
+}
+
 function normalizeDsldLabel(raw: any): DsldLabel {
   const ingredients: DsldIngredient[] = [];
   const proprietaryBlends: string[] = [];
 
   for (const row of raw.ingredientRows ?? []) {
     const q = row.quantity?.[0];
-    const hasOwnDose = q?.quantity != null;
     const nested = row.nestedRows ?? [];
 
-    if (!hasOwnDose && nested.length > 0) {
-      // A blend: the parent row names the blend, nested rows are its components
-      // without individually disclosed doses.
-      proprietaryBlends.push(row.name);
+    if (nested.length > 0) {
+      // A blend row. What makes it *proprietary* is that its components don't
+      // disclose individual amounts — the parent almost always still declares
+      // the blend's total weight, so the parent's own dose says nothing here.
+      const anyComponentDisclosed = nested.some(
+        (sub: any) => disclosedQuantity(sub.quantity?.[0]).quantity != null,
+      );
+
+      if (!anyComponentDisclosed) {
+        proprietaryBlends.push(row.name);
+        for (const sub of nested) {
+          ingredients.push({
+            name: sub.name,
+            category: sub.category,
+            isBlendComponent: true,
+          });
+        }
+        continue;
+      }
+
+      // Components are individually disclosed — a transparent grouping, not a
+      // proprietary blend. Record the components (not the parent) so doses
+      // aren't double-counted.
       for (const sub of nested) {
+        const sq = disclosedQuantity(sub.quantity?.[0]);
         ingredients.push({
           name: sub.name,
           category: sub.category,
-          isBlendComponent: true,
+          quantity: sq.quantity,
+          unit: sq.unit,
+          dvPercent: dvPercentOf(sub.quantity?.[0]),
+          isBlendComponent: false,
         });
       }
       continue;
     }
 
+    const own = disclosedQuantity(q);
     ingredients.push({
       name: row.name,
       category: row.category,
-      quantity: q?.quantity,
-      unit: q?.unit,
-      dvPercent: q?.dailyValueTargetGroup?.[0]?.percent,
+      quantity: own.quantity,
+      unit: own.unit,
+      dvPercent: dvPercentOf(q),
       isBlendComponent: false,
     });
   }

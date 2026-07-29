@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Act
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { C, F } from "../theme";
-import { resolveProduct, getReport, getReviews, ResolvedProduct } from "../services/api";
+import { resolveProduct, getReport, getReviews, getAlternatives, ResolvedProduct } from "../services/api";
 import { recordScan } from "../services/history";
-import type { TrustReport, ReviewConsensus } from "../types";
+import type { TrustReport, ReviewConsensus, Alternative } from "../types";
 import VerdictHero from "../components/VerdictHero";
 import WhyThisGrade from "../components/WhyThisGrade";
+import AlternativesPanel from "../components/AlternativesPanel";
 import { getScoreFactors } from "../utils/scoreFactors";
+import { reportIssues } from "../utils/issues";
 import BreakdownChart from "../components/BreakdownChart";
 import WarningList from "../components/WarningList";
 import ReviewsPanel from "../components/ReviewsPanel";
@@ -37,9 +39,31 @@ export default function ResultsScreen() {
   const [reviewsError, setReviewsError] = useState<string | undefined>();
   const [errorMsg, setErrorMsg] = useState<string | undefined>();
   const [segment, setSegment] = useState<Segment | null>(null);
+  const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
+  const [altLoading, setAltLoading] = useState(false);
+  const [altError, setAltError] = useState<string | undefined>();
 
   useEffect(() => {
     let cancelled = false;
+
+    // Only worth looking for alternatives when this label actually has a
+    // problem another product could improve on.
+    function loadAlternatives(r: TrustReport, p: ResolvedProduct) {
+      const issues = reportIssues(r);
+      if (issues.length === 0) return;
+      setAltLoading(true);
+      getAlternatives({ product: { brand: p.brand, name: p.name, dsldId: p.dsldId }, issues })
+        .then((res) => {
+          if (cancelled) return;
+          setAlternatives(res.alternatives);
+          setAltLoading(false);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          setAltLoading(false);
+          setAltError(e.message);
+        });
+    }
 
     async function run() {
       setStage("resolving");
@@ -59,6 +83,7 @@ export default function ResultsScreen() {
           setReviews(resolved.report.reviews);
           setStage("done");
           recordScan(resolved.report, resolved.productKey).catch(() => {});
+          loadAlternatives(resolved.report, resolved.product);
           return;
         }
 
@@ -72,6 +97,7 @@ export default function ResultsScreen() {
             setReport(r);
             setStage("done");
             recordScan(r, productKey).catch(() => {});
+            loadAlternatives(r, resolvedProduct);
           })
           .catch((e) => { if (!cancelled) { setStage("error"); setErrorMsg(e.message); } });
 
@@ -183,6 +209,13 @@ export default function ResultsScreen() {
                 )}
               </View>
             )}
+
+            <AlternativesPanel
+              alternatives={alternatives}
+              loading={altLoading}
+              error={altError}
+              onScan={(nextUpc) => navigation.replace("Results", { upc: nextUpc })}
+            />
 
             <SourcesFooter report={report} />
           </>
