@@ -11,10 +11,23 @@ import type { TrustReport, Citation } from "../src/types";
 interface ReportIngredient {
   name: string;
   amount?: number;
+  /** DSLD-sourced labels carry the amount as `quantity`; see normalizeIngredient. */
+  quantity?: number;
   unit?: string;
   dvPercent?: number;
   category?: string;
   isBlendComponent?: boolean;
+}
+
+// The label blob reaches us from two producers that name the dose field
+// differently: the vision extraction emits `amount`, while a DSLD label emits
+// `quantity`. The client round-trips whichever it got from /api/resolve
+// untouched, so without this the DSLD path (i.e. every barcode scan) arrived
+// with no amount at all — which made the prompt say "? mg", triggered a
+// spurious "exact amounts unavailable" data gap on products that do disclose
+// them, and left the upper-limit check with only %DV to work from.
+function normalizeIngredient(i: ReportIngredient): ReportIngredient {
+  return { ...i, amount: i.amount ?? i.quantity };
 }
 
 interface ReportRequestBody {
@@ -211,6 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const activeIngredients = (body.label?.ingredients ?? [])
       .filter((i) => !!i.name)
+      .map(normalizeIngredient)
       .slice(0, MAX_INGREDIENTS_RESEARCHED);
 
     const [evidence, recalls, adverseEvents] = await Promise.all([
