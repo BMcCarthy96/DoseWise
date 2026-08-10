@@ -88,10 +88,13 @@ export default function ResultsScreen() {
         }
 
         setStage("analyzing");
-        const { productKey } = resolved;
+        // `token` is passed straight back untouched — it is the server's proof
+        // that this product and label came out of /api/resolve rather than being
+        // made up by whoever called the API.
+        const { productKey, token } = resolved;
         const resolvedProduct = resolved.product;
 
-        getReport({ productKey, product: resolvedProduct, label: resolved.label })
+        getReport({ productKey, product: resolvedProduct, label: resolved.label, token })
           .then((r) => {
             if (cancelled) return;
             setReport(r);
@@ -102,7 +105,14 @@ export default function ResultsScreen() {
           .catch((e) => { if (!cancelled) { setStage("error"); setErrorMsg(e.message); } });
 
         setReviewsLoading(true);
-        getReviews({ productKey, brand: resolvedProduct.brand, name: resolvedProduct.name })
+        getReviews({
+          productKey,
+          brand: resolvedProduct.brand,
+          name: resolvedProduct.name,
+          product: resolvedProduct,
+          label: resolved.label,
+          token,
+        })
           .then((r) => { if (!cancelled) { setReviews(r.reviews); setReviewsLoading(false); } })
           .catch((e) => { if (!cancelled) { setReviewsLoading(false); setReviewsError(e.message); } });
       } catch (e: any) {

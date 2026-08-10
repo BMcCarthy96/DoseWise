@@ -36,13 +36,26 @@ export interface ResolveResult {
   report?: TrustReport;
   product?: ResolvedProduct;
   label?: unknown;
+  /**
+   * Opaque signature over { productKey, product, label } minted by /api/resolve.
+   * The client's only job is to hand it back untouched: /api/report and
+   * /api/reviews use it to confirm the product data really came from a lookup
+   * rather than from the caller, and refuse to write anything unverified into
+   * the shared report cache. See api/_lib/signing.ts.
+   */
+  token?: string;
 }
 
 export function resolveProduct(input: { upc?: string; base64?: string }): Promise<ResolveResult> {
   return post<ResolveResult>("/api/resolve", input);
 }
 
-export function getReport(body: { productKey: string; product: ResolvedProduct; label?: unknown }): Promise<TrustReport> {
+export function getReport(body: {
+  productKey: string;
+  product: ResolvedProduct;
+  label?: unknown;
+  token?: string;
+}): Promise<TrustReport> {
   return post<TrustReport>("/api/report", body);
 }
 
@@ -50,6 +63,9 @@ export function getReviews(body: {
   productKey: string;
   brand: string;
   name: string;
+  product?: ResolvedProduct;
+  label?: unknown;
+  token?: string;
 }): Promise<{ productKey: string; reviews: TrustReport["reviews"] }> {
   return post("/api/reviews", body);
 }

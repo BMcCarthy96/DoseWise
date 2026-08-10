@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkRateLimit, clientIp } from "./_lib/ratelimit";
 import { findAlternatives, isIssueCode, type IssueCode } from "./_lib/alternatives";
+import { LIMITS, MAX_JSON_BODY_BYTES, boundedNumber, boundedString, rejectOversizedBody } from "./_lib/validate";
 
 interface AlternativesRequestBody {
   product?: { brand?: string; name?: string; dsldId?: number };
@@ -12,8 +13,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
+  if (rejectOversizedBody(req, res, MAX_JSON_BODY_BYTES)) return;
 
-  const rl = checkRateLimit(clientIp(req));
+  const rl = await checkRateLimit(clientIp(req));
   if (!rl.ok) {
     res.setHeader("Retry-After", String(rl.retryAfter));
     res.status(429).json({ error: "Rate limit reached — please try again in a minute." });
@@ -21,8 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body: AlternativesRequestBody = req.body ?? {};
-  const brand = body.product?.brand?.trim();
-  const name = body.product?.name?.trim();
+  // brand/name become a DSLD search term, so they get the same bounding as
+  // everywhere else — an unbounded query string is still an unbounded outbound
+  // request made in this project's name.
+  const brand = boundedString(body.product?.brand, LIMITS.name);
+  const name = boundedString(body.product?.name, LIMITS.name);
+  const dsldId = boundedNumber(body.product?.dsldId, 0, 1_000_000_000);
   if (!name) {
     res.status(400).json({ error: "Missing product name." });
     return;
@@ -34,10 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
 
   try {
-    const alternatives = await findAlternatives(
-      { brand: brand ?? "", name, dsldId: body.product?.dsldId },
-      issues,
-    );
+    const alternatives = await findAlternatives({ brand: brand ?? "", name, dsldId }, issues);
     res.status(200).json({ alternatives });
   } catch {
     res.status(502).json({ error: "Could not look up alternatives right now — please try again." });

@@ -11,9 +11,10 @@
     "eas:build:ios": "eas build --platform ios --profile production",
     "eas:build:ios:preview": "eas build --platform ios --profile preview",
     "eas:submit:ios": "eas submit --platform ios --profile production --latest",
-    "test": "npm run test:doses && npm run test:cache",
+    "test": "npm run test:doses && npm run test:cache && npm run test:security",
     "test:doses": "tsx tests/dose-thresholds.mts",
     "test:cache": "tsx tests/cache-behavior.mts",
+    "test:security": "tsx tests/security.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -6,6 +6,8 @@ import { findDsldLabelByUpc, findDsldIdByName, getDsldLabel, DsldLabel } from ".
 import { getOffProductByUpc } from "./_lib/off";
 import { getCachedReport } from "./_lib/cache";
 import { extractJsonObject } from "./_lib/trustReport";
+import { signResolvePayload, type ResolvePayload } from "./_lib/signing";
+import { LIMITS, MAX_PHOTO_BODY_BYTES, boundedNumber, boundedString, boundedStringArray, rejectOversizedBody } from "./_lib/validate";
 
 interface VisionIngredient {
   name: string;
@@ -30,7 +32,39 @@ function productKeyForBrandName(brand: string, name: string): string {
   return createHash("sha1").update(`${brand.toLowerCase()}|${name.toLowerCase()}`).digest("hex");
 }
 
-async function extractLabelFromPhoto(base64: string): Promise<VisionExtraction | null> {
+/**
+ * Every payload that carries a productKey is signed here, because /api/resolve
+ * is the only place a product is ever identified from a trusted source (DSLD,
+ * Open Food Facts, or our own vision extraction). /api/report will not write
+ * anything to the shared cache without a matching signature — see
+ * api/_lib/signing.ts for why that matters.
+ */
+function signed<T extends ResolvePayload>(payload: T): T & { token?: string } {
+  return { ...payload, token: signResolvePayload(payload) };
+}
+
+// The client encodes whatever the camera or picker produced, which on web is
+// often a PNG. Declaring everything as image/jpeg meant a mislabelled image
+// reached the API and came back as an error the user saw as the unhelpful
+// "could not read the label", so the type is read from the payload's own magic
+// bytes instead of assumed. These four are exactly what the Anthropic API
+// accepts — anything else (HEIC, for instance) is rejected here with a message
+// that says what to do, rather than failing opaquely one call later.
+const MAGIC_BYTES: Array<[string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"]> = [
+  ["/9j/", "image/jpeg"],
+  ["iVBORw0KGgo", "image/png"],
+  ["R0lGOD", "image/gif"],
+  ["UklGR", "image/webp"],
+];
+
+function detectMediaType(base64: string): "image/jpeg" | "image/png" | "image/gif" | "image/webp" | null {
+  for (const [prefix, type] of MAGIC_BYTES) {
+    if (base64.startsWith(prefix)) return type;
+  }
+  return null;
+}
+
+async function extractLabelFromPhoto(base64: string, mediaType: NonNullable<ReturnType<typeof detectMediaType>>): Promise<VisionExtraction | null> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const prompt = `Look at this photo of a dietary supplement. It might show the full Supplement Facts panel, or it might just be the front of the bottle/box with the brand and product name — both are useful. Return ONLY a JSON object with this exact structure:
 {
@@ -54,7 +88,7 @@ Return ONLY the JSON object, no other text.`;
       {
         role: "user",
         content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
           { type: "text", text: prompt },
         ],
       },
@@ -71,7 +105,7 @@ Return ONLY the JSON object, no other text.`;
 }
 
 function dsldLabelToProduct(label: DsldLabel) {
-  return {
+  return signed({
     productKey: label.upc ? productKeyForUpc(label.upc) : productKeyForBrandName(label.brand, label.name),
     product: {
       source: "dsld" as const,
@@ -83,7 +117,7 @@ function dsldLabelToProduct(label: DsldLabel) {
       offMarket: label.offMarket,
     },
     label,
-  };
+  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -92,7 +126,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const rl = checkRateLimit(clientIp(req));
+  if (rejectOversizedBody(req, res, MAX_PHOTO_BODY_BYTES)) return;
+
+  const rl = await checkRateLimit(clientIp(req));
   if (!rl.ok) {
     res.setHeader("Retry-After", String(rl.retryAfter));
     res.status(429).json({ error: "Rate limit reached — please try again in a minute." });
@@ -125,11 +161,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const offProduct = await getOffProductByUpc(upc);
       if (offProduct) {
-        res.status(200).json({
+        res.status(200).json(signed({
           productKey,
           product: { source: "off" as const, upc, brand: offProduct.brand, name: offProduct.name },
           label: { ingredientsText: offProduct.ingredientsText },
-        });
+        }));
         return;
       }
 
@@ -142,17 +178,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(400).json({ error: "Invalid image" });
       return;
     }
-    const extraction = await extractLabelFromPhoto(base64);
+    const mediaType = detectMediaType(base64);
+    if (!mediaType) {
+      res.status(400).json({ error: "Unsupported image format — please use a JPEG, PNG, GIF, or WebP photo." });
+      return;
+    }
+    const extraction = await extractLabelFromPhoto(base64, mediaType);
     if (!extraction) {
       res.status(502).json({ error: "Could not read the label — please retake the photo with better lighting." });
       return;
     }
-    if (!extraction.brand?.trim() && !extraction.productName?.trim()) {
+    // The extraction is model output derived from a stranger's photo, so it is
+    // bounded here rather than downstream: whatever comes out of this is what
+    // gets signed, cached, and interpolated into the synthesis prompt.
+    const brand = boundedString(extraction.brand, LIMITS.name) ?? "";
+    const productName = boundedString(extraction.productName, LIMITS.name) ?? "";
+    if (!brand && !productName) {
       res.status(200).json({ productKey: `unidentified-${Date.now()}`, status: "unknown" });
       return;
     }
+    const servingSize = boundedString(extraction.servingSize, LIMITS.servingSize);
+    const ingredients = (Array.isArray(extraction.ingredients) ? extraction.ingredients : [])
+      .slice(0, LIMITS.ingredients)
+      .map((i) => ({
+        name: boundedString(i?.name, LIMITS.ingredientName) ?? "",
+        amount: boundedNumber(i?.amount, 0, 10_000_000),
+        unit: boundedString(i?.unit, 16),
+        dvPercent: boundedNumber(i?.dvPercent, 0, 1_000_000),
+        isBlendComponent: false,
+      }))
+      .filter((i) => i.name);
+    const proprietaryBlends = boundedStringArray(extraction.proprietaryBlends, LIMITS.listItems, LIMITS.listItem);
 
-    const productKey = productKeyForBrandName(extraction.brand, extraction.productName);
+    const productKey = productKeyForBrandName(brand, productName);
     const cached = await getCachedReport(productKey);
     if (cached) {
       res.status(200).json({ productKey, cached: true, report: cached });
@@ -162,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Best-effort enrichment against DSLD by name (may fail silently — the
     // vision extraction is already a complete, if less precise, label).
     let enriched: DsldLabel | null = null;
-    const dsldId = await findDsldIdByName(`${extraction.brand} ${extraction.productName}`);
+    const dsldId = await findDsldIdByName(`${brand} ${productName}`);
     if (dsldId) enriched = await getDsldLabel(dsldId);
 
     if (enriched) {
@@ -170,25 +228,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    res.status(200).json({
+    res.status(200).json(signed({
       productKey,
       product: {
         source: "vision" as const,
-        brand: extraction.brand,
-        name: extraction.productName,
-        servingSize: extraction.servingSize,
+        brand,
+        name: productName,
+        servingSize,
       },
       label: {
-        brand: extraction.brand,
-        name: extraction.productName,
-        servingSize: extraction.servingSize,
-        ingredients: (extraction.ingredients ?? []).map((i) => ({ ...i, isBlendComponent: false })),
-        proprietaryBlends: extraction.proprietaryBlends ?? [],
+        brand,
+        name: productName,
+        servingSize,
+        ingredients,
+        proprietaryBlends,
         otherIngredients: [],
         claims: [],
         offMarket: false,
       },
-    });
+    }));
   } catch {
     res.status(502).json({ error: "Lookup failed — please try again." });
   }

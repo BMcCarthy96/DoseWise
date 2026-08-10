@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const rl = checkRateLimit(clientIp(req));
+  const rl = await checkRateLimit(clientIp(req));
   if (!rl.ok) {
     res.setHeader("Retry-After", String(rl.retryAfter));
     res.status(429).json({ error: "Too many requests — please try again in a minute." });
