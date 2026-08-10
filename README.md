@@ -86,9 +86,10 @@ Reports are cached by product so scanning the same barcode twice is instant and 
 
 ## Development Notes
 
-- Run `npx tsc --noEmit` after every change. There is no lint or test script.
+- Run `npm run typecheck` after every change. There is no lint script.
+- `npm test` runs two regression suites. `test:doses` pins the nutrient-aware dose-safety thresholds (a failure means the app is either inventing a safety limit or missing a real one); `test:cache` pins the cache's best-effort contract — failures degrade to "regenerate" but are never unlogged. Both have a live section that hits DSLD / the real `report_cache` table and skips itself when the network or `.env` credentials are unavailable. The cache suite writes one throwaway row and deletes it.
 - Claude's JSON responses are parsed defensively (`extractJsonObject` in `api/_lib/trustReport.ts`) since enabling the web-search tool makes the model prone to wrapping JSON in narrative text despite instructions not to.
-- The in-memory rate limiter and report cache (`api/_lib/ratelimit.ts`, `api/_lib/cache.ts`) are per-warm-instance, not shared across concurrent serverless instances — fine for a demo, and the cache is slated to move to the Supabase `report_cache` table.
+- The report cache (`api/_lib/cache.ts`) is backed by the Supabase `report_cache` table, so it is shared across serverless instances and survives cold starts. The rate limiter (`api/_lib/ratelimit.ts`) is still in-memory and per-warm-instance — it bounds casual abuse, not a determined attacker; the real backstops are the daily cap, capped web-search/token usage per report, and an Anthropic console spend limit.
 
 ## Disclaimer
 
