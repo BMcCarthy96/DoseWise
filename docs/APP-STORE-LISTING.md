@@ -153,5 +153,6 @@ The app shows informational summaries of public research (NIH DSLD, PubMed, open
   do; if you change the policy, revisit the labels.
 - Sign-in with Apple is **not** required (email/password only, no Google/social
   login). If you add social login later, Apple will require Sign in with Apple too.
-- Screenshots are still needed (6.7" and 6.5" iPhone). Those come from a build/
-  simulator — separate step.
+- Screenshots are ready in `store/screenshots/iphone-6.7/` (1290×2796, the
+  required App Store Connect size — Apple auto-scales it to every iPhone, so
+  no separate 6.5" set is needed).

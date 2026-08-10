@@ -1,9 +1,12 @@
 // Regenerates the DoseWise app icons in assets/ from the brand shield-check
 // mark. The rendered PNGs are committed, so this only needs to run when the
-// mark or palette changes. Requires a one-off dev install of the renderer:
-//   npm i -D @resvg/resvg-js && node scripts/generate-icons.mjs
+// mark or palette changes. Requires a one-off dev install of the renderer
+// (pngjs is normally already present transitively, but install it explicitly
+// if `node scripts/generate-icons.mjs` can't find it):
+//   npm i -D @resvg/resvg-js pngjs && node scripts/generate-icons.mjs
 import { Resvg } from "@resvg/resvg-js";
-import { writeFileSync } from "fs";
+import { PNG } from "pngjs";
+import { readFileSync, writeFileSync } from "fs";
 
 // ── DoseWise brand marks ───────────────────────────────────────────────────
 // Shield-check mark on a 24-unit viewBox, matching the icon used throughout the
@@ -73,8 +76,20 @@ function render(svg, size, out) {
   console.log(`wrote ${out} (${size}x${size}, ${png.length} bytes)`);
 }
 
+// resvg always encodes RGBA, even for a full-bleed opaque icon. App Store
+// Connect rejects the 1024px marketing icon (ITMS-90717) if it carries an
+// alpha channel at all, regardless of whether any pixel is transparent — so
+// the iOS icon specifically needs re-encoding as alpha-free RGB.
+function stripAlpha(path) {
+  const png = PNG.sync.read(readFileSync(path));
+  const out = PNG.sync.write(png, { colorType: 2 });
+  writeFileSync(path, out);
+  console.log(`stripped alpha channel from ${path}`);
+}
+
 const A = "assets";
 render(iconSvg(1024), 1024, `${A}/icon.png`);
+stripAlpha(`${A}/icon.png`);
 render(adaptiveSvg(1024), 1024, `${A}/adaptive-icon.png`);
 render(splashSvg(1024), 1024, `${A}/splash-icon.png`);
 render(faviconSvg(48), 48, `${A}/favicon.png`);

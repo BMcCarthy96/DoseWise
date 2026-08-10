@@ -31,7 +31,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": ["CAMERA"]
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -42,15 +42,23 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow DoseWise to access your camera to scan supplement barcodes and labels."
+          "cameraPermission": "Allow DoseWise to access your camera to scan supplement barcodes and labels.",
+          "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow DoseWise to access your photos to scan a supplement label."
+          "photosPermission": "Allow DoseWise to access your photos to scan a supplement label.",
+          "microphonePermission": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "761eeac1-2d9d-4ce2-bac0-c5aa03256f93"
+      }
+    },
+    "owner": "bmccarthy96"
   }
 }
