@@ -62,7 +62,7 @@ function skip(name: string, why: string) {
 
 const TEST_KEY = "__cache_behavior_test__" + Date.now();
 const report = {
-  reportVersion: 1,
+  reportVersion: 2,
   generatedAt: new Date().toISOString(),
   product: { source: "dsld", dsldId: 1, upc: "000000000000", brand: "Test Brand", name: "Cache Behavior Test" },
   verdict: { grade: "good", score: 1, confidence: "low", headline: "h", summary: "s" },

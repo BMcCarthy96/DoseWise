@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createHash } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { checkRateLimit, clientIp } from "./_lib/ratelimit";
-import { findDsldLabelByUpc, findDsldIdByName, getDsldLabel, DsldLabel } from "./_lib/dsld";
+import { findDsldLabelByUpc, findDsldLabelByName, DsldLabel } from "./_lib/dsld";
 import { getOffProductByUpc } from "./_lib/off";
 import { getCachedReport } from "./_lib/cache";
 import { extractJsonObject } from "./_lib/trustReport";
@@ -104,9 +104,17 @@ Return ONLY the JSON object, no other text.`;
   }
 }
 
-function dsldLabelToProduct(label: DsldLabel) {
+// `matchedBy` records how confidently the product was identified, so the
+// report and the UI can tell a barcode-verified scan apart from a full-text
+// name match — see api/_lib/dsld.ts's identity gates for what "name" means
+// here. `forcedProductKey` lets a name match that passed the identity gates
+// but was NOT corroborated by ingredient amounts (gate 4) adopt the DSLD
+// label's data without re-keying the shared cache to that label's UPC —
+// otherwise a false-positive name match could poison another user's barcode
+// scan the same way the old unverified lookup did.
+function dsldLabelToProduct(label: DsldLabel, opts?: { matchedBy: "upc" | "name"; forcedProductKey?: string }) {
   return signed({
-    productKey: label.upc ? productKeyForUpc(label.upc) : productKeyForBrandName(label.brand, label.name),
+    productKey: opts?.forcedProductKey ?? (label.upc ? productKeyForUpc(label.upc) : productKeyForBrandName(label.brand, label.name)),
     product: {
       source: "dsld" as const,
       dsldId: label.dsldId,
@@ -115,6 +123,7 @@ function dsldLabelToProduct(label: DsldLabel) {
       name: label.name,
       servingSize: label.servingSize,
       offMarket: label.offMarket,
+      matchedBy: opts?.matchedBy ?? "upc",
     },
     label,
   });
@@ -163,7 +172,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (offProduct) {
         res.status(200).json(signed({
           productKey,
-          product: { source: "off" as const, upc, brand: offProduct.brand, name: offProduct.name },
+          product: { source: "off" as const, upc, brand: offProduct.brand, name: offProduct.name, matchedBy: "upc" as const },
           label: { ingredientsText: offProduct.ingredientsText },
         }));
         return;
@@ -218,13 +227,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Best-effort enrichment against DSLD by name (may fail silently — the
-    // vision extraction is already a complete, if less precise, label).
-    let enriched: DsldLabel | null = null;
-    const dsldId = await findDsldIdByName(`${brand} ${productName}`);
-    if (dsldId) enriched = await getDsldLabel(dsldId);
-
-    if (enriched) {
-      res.status(200).json(dsldLabelToProduct(enriched));
+    // vision extraction is already a complete, if less precise, label). Never
+    // adopted blind: findDsldLabelByName only returns a candidate that
+    // survived the brand/name/strength identity gates, and a match not also
+    // corroborated by ingredient amounts (gate 4) keeps the vision-derived
+    // productKey rather than re-keying the cache to the DSLD label's UPC.
+    const nameMatch = await findDsldLabelByName(brand, productName, ingredients).catch(() => null);
+    if (nameMatch) {
+      res.status(200).json(dsldLabelToProduct(nameMatch.label, {
+        matchedBy: "name",
+        forcedProductKey: nameMatch.corroborated ? undefined : productKey,
+      }));
       return;
     }
 
@@ -235,6 +248,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         brand,
         name: productName,
         servingSize,
+        matchedBy: "photo" as const,
       },
       label: {
         brand,

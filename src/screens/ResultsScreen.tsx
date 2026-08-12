@@ -42,6 +42,11 @@ export default function ResultsScreen() {
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const [altLoading, setAltLoading] = useState(false);
   const [altError, setAltError] = useState<string | undefined>();
+  // Kept around purely so the "Re-check" button can replay the same
+  // productKey/product/label/token against /api/report with refresh:true —
+  // none of this is otherwise needed once the report has loaded.
+  const [resolveInfo, setResolveInfo] = useState<{ productKey: string; product: ResolvedProduct; label: unknown; token?: string } | null>(null);
+  const [rechecking, setRechecking] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +82,7 @@ export default function ResultsScreen() {
         }
 
         setProduct(resolved.product);
+        setResolveInfo({ productKey: resolved.productKey, product: resolved.product, label: resolved.label, token: resolved.token });
 
         if (resolved.cached && resolved.report) {
           setReport(resolved.report);
@@ -123,6 +129,20 @@ export default function ResultsScreen() {
     run();
     return () => { cancelled = true; };
   }, [upc, base64]);
+
+  async function handleRecheck() {
+    if (!resolveInfo || rechecking) return;
+    setRechecking(true);
+    try {
+      const r = await getReport({ ...resolveInfo, refresh: true });
+      setReport(r);
+      recordScan(r, resolveInfo.productKey).catch(() => {});
+    } catch {
+      // Best-effort — the existing (stale-but-real) report stays on screen.
+    } finally {
+      setRechecking(false);
+    }
+  }
 
   return (
     <SafeAreaView style={s.container}>
@@ -179,6 +199,8 @@ export default function ResultsScreen() {
 
             <WhyThisGrade factors={getScoreFactors(report)} />
 
+            <StalenessBanner report={report} rechecking={rechecking} onRecheck={resolveInfo ? handleRecheck : undefined} />
+
             {(report.verdict.confidence === "low" ||
               report.labelTrust.flags.some((f) => f.type === "data_gap")) && (
               <View style={s.limitedBanner}>
@@ -204,6 +226,7 @@ export default function ResultsScreen() {
                     ingredients={report.breakdown.ingredients}
                     proprietaryBlends={report.breakdown.proprietaryBlends}
                     otherIngredients={report.breakdown.otherIngredients}
+                    matchedBy={report.product.matchedBy}
                   />
                 )}
                 {segment === "warnings" && (
@@ -212,6 +235,7 @@ export default function ResultsScreen() {
                     recalls={report.warnings.recalls}
                     adverseEventSummary={report.warnings.adverseEventSummary}
                     researchConsensus={report.warnings.researchConsensus}
+                    openfdaStatus={report.meta.sources?.openfda}
                   />
                 )}
                 {segment === "reviews" && (
@@ -235,13 +259,75 @@ export default function ResultsScreen() {
   );
 }
 
+// 7 days matches the cache's own TTL (api/_lib/cache.ts) — a report can't be
+// served stale for longer than that, so there's no point offering a re-check
+// before then.
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+function StalenessBanner({
+  report,
+  rechecking,
+  onRecheck,
+}: {
+  report: TrustReport;
+  rechecking: boolean;
+  onRecheck?: () => void;
+}) {
+  if (!report.meta.cached) return null;
+  const generatedAt = new Date(report.generatedAt).getTime();
+  if (!Number.isFinite(generatedAt)) return null;
+  const ageMs = Date.now() - generatedAt;
+  const days = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+  if (ageMs < STALE_AFTER_MS) return null;
+
+  return (
+    <View style={s.staleBanner}>
+      <Ionicons name="time-outline" size={18} color={C.muted} />
+      <Text style={s.staleText}>
+        Checked {days} day{days === 1 ? "" : "s"} ago.
+      </Text>
+      {onRecheck && (
+        <TouchableOpacity onPress={onRecheck} disabled={rechecking} style={s.staleBtn}>
+          {rechecking ? <ActivityIndicator size="small" color={C.primary} /> : <Text style={s.staleBtnText}>Re-check</Text>}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// Derives what to actually claim about each source from the report's own
+// data rather than listing every source unconditionally — the old version
+// always said "PubMed / NIH" and "openFDA" even when zero citations came back
+// or the search never ran, which reads as authority the report didn't earn.
 function SourcesFooter({ report }: { report: TrustReport }) {
   const sources: string[] = [];
-  if (report.product.source === "dsld") sources.push("NIH Dietary Supplement Label Database (product & ingredient facts)");
+  const matchedByNote: Partial<Record<NonNullable<TrustReport["product"]["matchedBy"]>, string>> = {
+    upc: "verified by barcode",
+    name: "verified by matching label details",
+    photo: "from a label photo, not verified against a product database",
+  };
+  if (report.product.source === "dsld") {
+    sources.push(`NIH Dietary Supplement Label Database (product & ingredient facts${report.product.matchedBy ? `, ${matchedByNote[report.product.matchedBy]}` : ""})`);
+  }
   if (report.product.source === "off") sources.push("Open Food Facts (product identification)");
   if (report.product.source === "vision") sources.push("Label photo read by AI (unverified against a product database)");
-  sources.push("PubMed / NIH (published research)");
-  sources.push("openFDA (recalls & adverse-event reports)");
+
+  const citationCount = report.breakdown.ingredients.reduce((sum, i) => sum + (i.citations?.length ?? 0), 0);
+  const pubmedStatus = report.meta.sources?.pubmed;
+  sources.push(
+    pubmedStatus && pubmedStatus !== "ok"
+      ? "PubMed — unreachable for this report"
+      : citationCount > 0
+        ? `PubMed — ${citationCount} citation${citationCount === 1 ? "" : "s"} retrieved`
+        : "PubMed — searched, no matching studies found",
+  );
+
+  const openfdaStatus = report.meta.sources?.openfda;
+  sources.push(
+    openfdaStatus && openfdaStatus !== "ok"
+      ? "openFDA — unreachable for this report"
+      : "openFDA (recalls & adverse-event reports)",
+  );
   if (report.reviews) sources.push("Web search (third-party certifications & public reviews)");
 
   return (
@@ -309,6 +395,18 @@ const s = StyleSheet.create({
   },
   limitedText: { flex: 1, fontFamily: F.semibold, fontSize: 12.5, color: C.text, lineHeight: 18 },
   limitedBold: { fontFamily: F.extrabold, color: C.caution },
+  staleBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: C.fill,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 12,
+  },
+  staleText: { flex: 1, fontFamily: F.semibold, fontSize: 12.5, color: C.muted },
+  staleBtn: { backgroundColor: C.primary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72, alignItems: "center" },
+  staleBtnText: { fontFamily: F.bold, fontSize: 12, color: "#fff" },
   segments: { flexDirection: "row", gap: 10, marginTop: 20 },
   segmentBtn: {
     flex: 1,

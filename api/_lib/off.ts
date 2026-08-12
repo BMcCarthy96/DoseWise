@@ -3,6 +3,10 @@
 // brand/name (and raw ingredients text) into the Claude synthesis step; it
 // never supplies %DV breakdown data the way DSLD does.
 
+import { fetchWithTimeout } from "./http";
+
+const OFF_TIMEOUT_MS = 5000;
+
 export interface OffProduct {
   brand: string;
   name: string;
@@ -13,9 +17,10 @@ export async function getOffProductByUpc(upcDigits: string): Promise<OffProduct 
   const clean = upcDigits.replace(/\D/g, "");
   if (!clean) return null;
 
-  const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${clean}.json`);
-  if (!res.ok) return null;
-  const data = await res.json();
+  const res = await fetchWithTimeout(`https://world.openfoodfacts.org/api/v2/product/${clean}.json`, { timeoutMs: OFF_TIMEOUT_MS }).catch(() => null);
+  if (!res || !res.ok) return null;
+  const data = await res.json().catch(() => null);
+  if (!data) return null;
   if (data?.status !== 1 || !data.product) return null;
 
   const p = data.product;

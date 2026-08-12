@@ -9,8 +9,10 @@
 
 import { getDsldLabel, type DsldLabel, type DsldIngredient } from "./dsld";
 import { checkDoseAssessment, flagRiskyIngredient } from "./trustReport";
+import { fetchWithTimeout } from "./http";
 
 const DSLD_BASE = "https://api.ods.od.nih.gov/dsld/v9";
+const DSLD_TIMEOUT_MS = 6000;
 
 // The label problems we can detect deterministically from DSLD data alone.
 export const ISSUE_CODES = [
@@ -123,8 +125,8 @@ interface SearchHit {
 }
 
 async function searchDsldProducts(query: string): Promise<SearchHit[]> {
-  const res = await fetch(`${DSLD_BASE}/search-filter?q=${encodeURIComponent(query)}`);
-  if (!res.ok) return [];
+  const res = await fetchWithTimeout(`${DSLD_BASE}/search-filter?q=${encodeURIComponent(query)}`, { timeoutMs: DSLD_TIMEOUT_MS }).catch(() => null);
+  if (!res || !res.ok) return [];
   const data = await res.json().catch(() => null);
   const hits = Array.isArray(data?.hits) ? data.hits : [];
   return hits

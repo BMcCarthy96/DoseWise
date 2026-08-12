@@ -63,8 +63,11 @@ export function deriveScoreFactors(report: TrustReport): ScoreFactor[] {
     });
   }
 
-  // Positive: clean recall history.
-  if (recallCount === 0) {
+  // Positive: clean recall history — but only when the search actually ran.
+  // An openFDA outage falls back to an empty recalls array the same way a
+  // genuine clean search does, so without checking source health this would
+  // claim "no recalls" for a brand nobody managed to check.
+  if (recallCount === 0 && (report.meta?.sources?.openfda ?? "ok") === "ok") {
     factors.push({ impact: "positive", text: "No FDA recalls found for this brand." });
   }
 

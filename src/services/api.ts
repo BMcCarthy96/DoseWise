@@ -55,6 +55,8 @@ export function getReport(body: {
   product: ResolvedProduct;
   label?: unknown;
   token?: string;
+  /** Forces regeneration past the cache — only honoured when `token` verifies. */
+  refresh?: boolean;
 }): Promise<TrustReport> {
   return post<TrustReport>("/api/report", body);
 }

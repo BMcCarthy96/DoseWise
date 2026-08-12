@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { C, F } from "../theme";
-import type { LabelTrustFlag, Recall, AdverseEventSummary } from "../types";
+import type { LabelTrustFlag, Recall, AdverseEventSummary, SourceStatus } from "../types";
 
 const SEVERITY_COLOR: Record<string, string> = { info: C.secondary, warn: C.caution, danger: C.bad };
 
@@ -11,12 +11,16 @@ export default function WarningList({
   recalls,
   adverseEventSummary,
   researchConsensus,
+  openfdaStatus,
 }: {
   flags: LabelTrustFlag[];
   recalls: Recall[];
   adverseEventSummary: AdverseEventSummary | null;
   researchConsensus: string;
+  /** When set and not "ok", the recall/adverse-event search couldn't be completed — shown as unknown, never as clean. */
+  openfdaStatus?: SourceStatus;
 }) {
+  const openfdaUnavailable = openfdaStatus != null && openfdaStatus !== "ok";
   return (
     <View style={s.container}>
       {flags.length > 0 && (
@@ -33,8 +37,12 @@ export default function WarningList({
 
       <View style={s.section}>
         <Text style={s.sectionTitle}>FDA recalls</Text>
-        {recalls.length === 0 ? (
-          <Text style={s.muted}>No recall records found for this brand.</Text>
+        {openfdaUnavailable ? (
+          <Text style={s.unknownNote}>
+            openFDA couldn't be reached when this report was generated — recall status is unknown, not clean.
+          </Text>
+        ) : recalls.length === 0 ? (
+          <Text style={s.muted}>Searched openFDA and found no recall records for this brand.</Text>
         ) : (
           recalls.map((r, i) => (
             <View key={i} style={s.recallRow}>
@@ -50,13 +58,23 @@ export default function WarningList({
 
       <View style={s.section}>
         <Text style={s.sectionTitle}>Adverse event reports</Text>
-        {adverseEventSummary ? (
-          <Text style={s.muted}>
-            {adverseEventSummary.reportCount} reports filed mentioning this brand (unverified, self-reported).
-            Most common: {adverseEventSummary.topReactions.join(", ")}.
+        {openfdaUnavailable ? (
+          <Text style={s.unknownNote}>
+            openFDA CAERS couldn't be reached when this report was generated — adverse-event status is unknown.
           </Text>
+        ) : adverseEventSummary ? (
+          <>
+            <Text style={s.muted}>
+              {adverseEventSummary.reportCount} report{adverseEventSummary.reportCount === 1 ? "" : "s"} filed mentioning
+              this brand. Most common reactions mentioned: {adverseEventSummary.topReactions.join(", ")}.
+            </Text>
+            <Text style={s.causationNote}>
+              These are unverified, self-reported reports to openFDA CAERS. They do not establish that this product
+              caused the reaction — only that someone mentioned this brand when filing one.
+            </Text>
+          </>
         ) : (
-          <Text style={s.muted}>No adverse event records found for this brand.</Text>
+          <Text style={s.muted}>Searched openFDA CAERS and found no adverse event records for this brand.</Text>
         )}
       </View>
 
@@ -79,5 +97,7 @@ const s = StyleSheet.create({
   recallReason: { fontFamily: F.semibold, fontSize: 13, color: C.text, lineHeight: 18 },
   recallMeta: { fontFamily: F.semibold, fontSize: 11, color: C.muted, marginTop: 2 },
   muted: { fontFamily: F.semibold, fontSize: 13, color: C.muted, lineHeight: 19 },
+  causationNote: { fontFamily: F.semibold, fontSize: 11.5, color: C.muted, lineHeight: 16, marginTop: 4, fontStyle: "italic" },
+  unknownNote: { fontFamily: F.semibold, fontSize: 13, color: C.caution, lineHeight: 19 },
   consensus: { fontFamily: F.semibold, fontSize: 13, color: C.text, lineHeight: 19 },
 });

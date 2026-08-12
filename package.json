@@ -11,8 +11,12 @@
     "eas:build:ios": "eas build --platform ios --profile production",
     "eas:build:ios:preview": "eas build --platform ios --profile preview",
     "eas:submit:ios": "eas submit --platform ios --profile production --latest",
-    "test": "npm run test:doses && npm run test:cache && npm run test:security",
+    "test": "npm run test:doses && npm run test:nutrients && npm run test:dsld-match && npm run test:score && npm run test:sources && npm run test:cache && npm run test:security",
     "test:doses": "tsx tests/dose-thresholds.mts",
+    "test:nutrients": "tsx tests/nutrient-resolution.mts",
+    "test:dsld-match": "tsx tests/dsld-name-match.mts",
+    "test:score": "tsx tests/score-rubric.mts",
+    "test:sources": "tsx tests/source-failure.mts",
     "test:cache": "tsx tests/cache-behavior.mts",
     "test:security": "tsx tests/security.mts",
     "typecheck": "tsc --noEmit"

@@ -1,7 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import type { TrustReport } from "../../src/types";
 
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// A report generated while a source was degraded gets a much shorter TTL, so
+// an openFDA/PubMed outage isn't frozen into the shared cache and served to
+// everyone who scans that product for a week — see api/report.ts's
+// meta.sources for what counts as degraded.
+export const DEGRADED_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // The cache is strictly an optimization: every function here swallows its own
 // failures and reports a miss, so a broken or unreachable database degrades to
@@ -53,6 +58,11 @@ function describeFailure(error: { message?: string; code?: string } | null, thro
   return `${message}${code}${hint}`;
 }
 
+// Reports below this version were scored by the model with no deterministic
+// basis (see src/utils/score.ts) — treating them as a miss is what clears
+// every invented score out of the shared cache on deploy, without a migration.
+const MIN_REPORT_VERSION = 2;
+
 export async function getCachedReport(productKey: string): Promise<TrustReport | null> {
   const client = getAdminClient();
   if (!client) return null;
@@ -60,7 +70,7 @@ export async function getCachedReport(productKey: string): Promise<TrustReport |
   try {
     const { data, error } = await client
       .from("report_cache")
-      .select("report, expires_at")
+      .select("report, expires_at, report_version")
       .eq("product_key", productKey)
       .maybeSingle();
 
@@ -70,6 +80,7 @@ export async function getCachedReport(productKey: string): Promise<TrustReport |
     }
     if (!data) return null; // ordinary miss
     if (new Date(data.expires_at).getTime() < Date.now()) return null; // ordinary expiry
+    if ((data.report_version ?? 0) < MIN_REPORT_VERSION) return null; // stale scoring model — regenerate
     return data.report as TrustReport;
   } catch (e) {
     // A network-layer throw would otherwise escape into the request handler,
@@ -79,7 +90,7 @@ export async function getCachedReport(productKey: string): Promise<TrustReport |
   }
 }
 
-export async function setCachedReport(productKey: string, report: TrustReport): Promise<void> {
+export async function setCachedReport(productKey: string, report: TrustReport, ttlMs: number = CACHE_TTL_MS): Promise<void> {
   const client = getAdminClient();
   if (!client) return;
 
@@ -94,7 +105,7 @@ export async function setCachedReport(productKey: string, report: TrustReport): 
         report,
         report_version: report.reportVersion,
         model: report.meta.model,
-        expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
+        expires_at: new Date(Date.now() + ttlMs).toISOString(),
       },
       { onConflict: "product_key" },
     );

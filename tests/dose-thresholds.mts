@@ -40,7 +40,7 @@ const CASES: Case[] = [
   // Real limits that sit below 300% DV — the old flat rule missed every one.
   { name: "Niacin (as niacinamide)", amount: 50, unit: "mg", dvPercent: 313, expect: "above_UL", why: "UL 35 mg" },
   { name: "Niacin", amount: 40, unit: "mg", dvPercent: 250, expect: "above_UL", why: "UL 35 mg — below the old 300% cutoff" },
-  { name: "Folate (as folic acid)", amount: 1360, unit: "mcg", dvPercent: 340, expect: "above_UL", why: "UL 1000 mcg" },
+  { name: "Folate (as folic acid)", amount: 1360, unit: "mcg", dvPercent: 340, expect: "effective", why: "FDA mandates folate be declared in mcg DFE; 1360 mcg DFE / 1.7 = 800 mcg folic acid, below the 1000 mcg folic-acid UL" },
   { name: "Iron (as ferrous fumarate)", amount: 65, unit: "mg", dvPercent: 361, expect: "above_UL", why: "UL 45 mg" },
   { name: "Zinc (as zinc picolinate)", amount: 50, unit: "mg", dvPercent: 455, expect: "above_UL", why: "UL 40 mg" },
   { name: "Magnesium (as magnesium oxide)", amount: 400, unit: "mg", dvPercent: 95, expect: "above_UL", why: "supplemental UL 350 mg sits below 100% DV" },
@@ -66,7 +66,7 @@ const CASES: Case[] = [
   { name: "Beta-Carotene", amount: 15000, unit: "mcg", dvPercent: 1667, expect: "effective", why: "provitamin A has no UL of its own" },
 
   // IU is form-dependent, so it is never converted; falls through to %DV.
-  { name: "Vitamin D", amount: 2000, unit: "IU", dvPercent: 250, expect: "effective", why: "IU not converted; 250% is under the 500% ratio" },
+  { name: "Vitamin D", amount: 2000, unit: "IU", dvPercent: 250, expect: "effective", why: "2000 IU * 0.025 = 50 mcg, under the 100 mcg UL" },
 
   { name: "Vitamin C", amount: 10, unit: "mg", dvPercent: 11, expect: "below_effective", why: "under 20% DV" },
 ];
