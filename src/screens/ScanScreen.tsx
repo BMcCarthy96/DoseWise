@@ -1,6 +1,5 @@
 import React, { useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BarcodeScanner from "../components/BarcodeScanner";
 import { C, F } from "../theme";
@@ -24,30 +23,13 @@ export default function ScanScreen() {
         <Text style={s.subtitle}>Scan a supplement to see what's really inside</Text>
       </View>
 
+      {/* Photo / upload / manual-UPC all live in the FAB menu — duplicating
+          them here just crowded the viewfinder. */}
       <View style={s.viewfinder}>
         <BarcodeScanner onScanned={handleScanned} />
         <View style={s.reticleOverlay} pointerEvents="none">
           <View style={s.reticle} />
         </View>
-      </View>
-
-      <View style={s.actions}>
-        <TouchableOpacity
-          style={s.actionBtn}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate("LabelPhoto", { pick: "camera" })}
-        >
-          <Ionicons name="camera-outline" size={20} color={C.primary} />
-          <Text style={s.actionLabel}>Photo the label</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.actionBtn}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate("LabelPhoto", { pick: "library" })}
-        >
-          <Ionicons name="images-outline" size={20} color={C.primary} />
-          <Text style={s.actionLabel}>Upload a photo</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -62,6 +44,7 @@ const s = StyleSheet.create({
     flex: 1,
     marginHorizontal: 20,
     marginTop: 16,
+    marginBottom: 20,
     borderRadius: 28,
     backgroundColor: C.text,
     overflow: "hidden",
@@ -80,18 +63,4 @@ const s = StyleSheet.create({
     borderWidth: 3,
     borderColor: C.primary,
   },
-  actions: { flexDirection: "row", padding: 20, gap: 12 },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 16,
-    paddingVertical: 14,
-  },
-  actionLabel: { fontFamily: F.bold, fontSize: 14, color: C.text },
 });
