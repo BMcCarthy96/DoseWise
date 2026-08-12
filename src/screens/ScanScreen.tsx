@@ -35,10 +35,18 @@ export default function ScanScreen() {
         <TouchableOpacity
           style={s.actionBtn}
           activeOpacity={0.85}
-          onPress={() => navigation.navigate("LabelPhoto")}
+          onPress={() => navigation.navigate("LabelPhoto", { pick: "camera" })}
         >
           <Ionicons name="camera-outline" size={20} color={C.primary} />
           <Text style={s.actionLabel}>Photo the label</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.actionBtn}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("LabelPhoto", { pick: "library" })}
+        >
+          <Ionicons name="images-outline" size={20} color={C.primary} />
+          <Text style={s.actionLabel}>Upload a photo</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

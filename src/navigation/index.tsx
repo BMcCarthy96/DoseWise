@@ -18,6 +18,7 @@ import HistoryScreen from "../screens/HistoryScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import ResultsScreen from "../screens/ResultsScreen";
 import AuthScreen from "../screens/AuthScreen";
+import DisclaimerScreen from "../screens/DisclaimerScreen";
 import ManualUpcModal from "../components/ManualUpcModal";
 import { C, F } from "../theme";
 
@@ -143,7 +144,7 @@ function CustomTabBar({
             <TouchableOpacity
               style={s.fabMenuItem}
               activeOpacity={0.75}
-              onPress={() => closeMenu(() => navigation.navigate("LabelPhoto" as any))}
+              onPress={() => closeMenu(() => navigation.navigate("LabelPhoto" as any, { pick: "camera" }))}
             >
               <View style={[s.fabMenuIcon, { backgroundColor: C.secondary }]}>
                 <Ionicons name="camera" size={18} color="#fff" />
@@ -151,6 +152,20 @@ function CustomTabBar({
               <View>
                 <Text style={s.fabMenuLabel}>Photo Label</Text>
                 <Text style={s.fabMenuSub}>Read Supplement Facts</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={s.fabMenuDivider} />
+            <TouchableOpacity
+              style={s.fabMenuItem}
+              activeOpacity={0.75}
+              onPress={() => closeMenu(() => navigation.navigate("LabelPhoto" as any, { pick: "library" }))}
+            >
+              <View style={[s.fabMenuIcon, { backgroundColor: C.secondary }]}>
+                <Ionicons name="images" size={18} color="#fff" />
+              </View>
+              <View>
+                <Text style={s.fabMenuLabel}>Upload Photo</Text>
+                <Text style={s.fabMenuSub}>Use a picture you already have</Text>
               </View>
             </TouchableOpacity>
             <View style={s.fabMenuDivider} />
@@ -229,6 +244,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Results" component={ResultsScreen} options={{ presentation: "modal" }} />
         <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: "modal" }} />
+        <Stack.Screen name="Disclaimer" component={DisclaimerScreen} options={{ presentation: "modal" }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

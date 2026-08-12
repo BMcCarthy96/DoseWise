@@ -21,9 +21,51 @@ function Point({ icon, title, body }: { icon: React.ComponentProps<typeof Ionico
   );
 }
 
+// The disclaimer text itself, shared by the first-run gate and the re-readable
+// copy in Settings, so the two can never drift apart.
+export function DisclaimerBody({ heading }: { heading: string }) {
+  return (
+    <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <View style={s.badge}>
+        <Ionicons name="shield-checkmark" size={30} color="#fff" />
+      </View>
+      <Text style={s.title}>{heading}</Text>
+      <Text style={s.intro}>
+        DoseWise helps you understand what's in a supplement using published research and public regulatory data.
+        A few things to know first:
+      </Text>
+
+      <View style={s.points}>
+        <Point
+          icon="information-circle-outline"
+          title="Informational, not medical advice"
+          body="DoseWise summarizes research and label data to help you make sense of a product. It doesn't diagnose, treat, or replace a conversation with a healthcare professional."
+        />
+        <Point
+          icon="people-outline"
+          title="Talk to a professional"
+          body="Always check with a doctor or pharmacist before starting, stopping, or combining supplements — especially if you're pregnant, on medication, or managing a health condition."
+        />
+        <Point
+          icon="document-text-outline"
+          title="We show our sources — and our limits"
+          body="Reports draw on NIH, PubMed, and openFDA data, with links you can verify. When the data is thin, DoseWise says so rather than guessing."
+        />
+        <Point
+          icon="alert-circle-outline"
+          title="Not an official or endorsed source"
+          body="DoseWise is an independent tool. It is not affiliated with, or endorsed by, the FDA, NIH, or any supplement manufacturer."
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
 // Shows a one-time informational disclaimer before the app is usable. Required
 // posture for a health-information app: make it unmistakable that DoseWise is
 // informational only, not medical advice, and not an official/endorsed source.
+// Once accepted it never reappears — Settings → "Review disclaimer" is the way
+// back to it, so accepting doesn't bury the text permanently.
 export default function DisclaimerGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "needs_accept" | "accepted">("loading");
 
@@ -43,39 +85,7 @@ export default function DisclaimerGate({ children }: { children: React.ReactNode
 
   return (
     <SafeAreaView style={s.container} edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.badge}>
-          <Ionicons name="shield-checkmark" size={30} color="#fff" />
-        </View>
-        <Text style={s.title}>Before you start</Text>
-        <Text style={s.intro}>
-          DoseWise helps you understand what's in a supplement using published research and public regulatory data.
-          A few things to know first:
-        </Text>
-
-        <View style={s.points}>
-          <Point
-            icon="information-circle-outline"
-            title="Informational, not medical advice"
-            body="DoseWise summarizes research and label data to help you make sense of a product. It doesn't diagnose, treat, or replace a conversation with a healthcare professional."
-          />
-          <Point
-            icon="people-outline"
-            title="Talk to a professional"
-            body="Always check with a doctor or pharmacist before starting, stopping, or combining supplements — especially if you're pregnant, on medication, or managing a health condition."
-          />
-          <Point
-            icon="document-text-outline"
-            title="We show our sources — and our limits"
-            body="Reports draw on NIH, PubMed, and openFDA data, with links you can verify. When the data is thin, DoseWise says so rather than guessing."
-          />
-          <Point
-            icon="alert-circle-outline"
-            title="Not an official or endorsed source"
-            body="DoseWise is an independent tool. It is not affiliated with, or endorsed by, the FDA, NIH, or any supplement manufacturer."
-          />
-        </View>
-      </ScrollView>
+      <DisclaimerBody heading="Before you start" />
 
       <View style={s.footer}>
         <TouchableOpacity style={s.button} activeOpacity={0.85} onPress={accept}>

@@ -121,7 +121,12 @@ export default function SettingsScreen() {
       </View>
 
       <View style={s.section}>
-        <Row icon="information-circle-outline" label="Data sources" sub="NIH, PubMed, openFDA & more" />
+        <Row
+          icon="information-circle-outline"
+          label="Review disclaimer"
+          sub="What DoseWise is, its sources, and its limits"
+          onPress={() => navigation.navigate("Disclaimer")}
+        />
         <Row icon="trash-outline" label="Clear scan history" onPress={clearHistory} destructive />
       </View>
 

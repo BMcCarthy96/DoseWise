@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { C, F } from "../theme";
 
 async function compressForUpload(uri: string): Promise<{ uri: string; base64: string }> {
@@ -38,8 +38,20 @@ async function compressOrFallback(
 
 export default function LabelPhotoScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+
+  // Arriving with `pick` means the user already chose camera-vs-library on the
+  // previous screen, so open it straight away rather than making them pick
+  // twice. Clearing the param first stops it re-firing when the tab refocuses.
+  const pick: "camera" | "library" | undefined = route.params?.pick;
+  useEffect(() => {
+    if (!pick) return;
+    navigation.setParams({ pick: undefined });
+    if (pick === "camera") pickFromCamera();
+    else pickFromLibrary();
+  }, [pick]);
 
   async function pickFromCamera() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();

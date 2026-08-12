@@ -189,11 +189,13 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Results: { upc?: string; base64?: string };
   Auth: undefined;
+  Disclaimer: undefined;
 };
 
 export type TabParamList = {
   Scan: undefined;
   History: undefined;
   Settings: undefined;
-  LabelPhoto: undefined;
+  /** `pick` opens the camera or photo library immediately, skipping the empty picker screen. */
+  LabelPhoto: { pick?: "camera" | "library" } | undefined;
 };
