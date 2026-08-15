@@ -275,10 +275,13 @@ Do **not** run a full `npm install` from the Windows side against the WSL
 
 ## 9. Known gaps / deliberately not done
 
-- **UI not visually verified on device by me** — the Expo dev server couldn't be started
-  from my environment, so every UI change in `47a6009` is typecheck-verified only. The
-  `a82c7ee`/`56e7e05` changes are likewise unverified visually. Worth an eyeball pass on
-  the low-confidence hero, the staleness banner, and the empty-citations state.
+- **UI verified on device** — run on a physical phone via Expo Go by the project owner;
+  everything rendered correctly. Note that several of the new states are *conditional*
+  and only appear given the right report — the desaturated low-confidence hero, the
+  staleness banner (cached >7 days), the "unreachable for this report" source footer,
+  and the empty-citations message. A normal scan of a clean product exercises none of
+  them, so if you change that code, construct the condition deliberately rather than
+  assuming a routine scan covers it.
 - **Adverse events carry zero scoring weight** (see §2). Revisit once openFDA brand
   matching has held up in practice.
 - **No salt→elemental-fraction table.** DSLD rows named for a salt (`Magnesium
